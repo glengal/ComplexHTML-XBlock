@@ -22,7 +22,7 @@ class ComplexHTMLXBlock(XBlock):
 
     mysql_database  = 'edxapp'
     mysql_user      = 'root'
-    mysql_pwd       = ''
+    mysql_pwd       = '@v1@710npr0j53n3c@'
 
     display_name = String(
         display_name="ComplexHTML XBlock",
