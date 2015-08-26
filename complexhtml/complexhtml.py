@@ -208,7 +208,7 @@ class ComplexHTMLXBlock(XBlock):
 
         user_score = "0"
         # user and course
-        db = dbconnection.mysql('localhost', 3306, self.mysql_database, self.mysql_user, mysql_pwd)
+        db = dbconnection.mysql('localhost', 3306, self.mysql_database, self.mysql_user, '')
         q = "SELECT id, user_id, course_id FROM student_anonymoususerid "
         db.query(q)
         res = db.fetchall()
