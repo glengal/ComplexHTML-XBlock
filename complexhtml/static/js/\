@@ -118,6 +118,7 @@ function sendEmail(){
 
 }
 function checkQuizResult(selectedId, selected){
+    var correct = 0;
     var answer = [];
     for (var j = 0; j < anySlide.options.quizzes.length; j++){
     answer[j]= anySlide.options.quizzes[j].json.questions[0].a;
@@ -129,15 +130,17 @@ function checkQuizResult(selectedId, selected){
     console.log(selected)
     var quiz_id = $('.cdot_quiz').attr('id');
     var selectedId1 = selectedId.split('_');
-    var selectedId2 = parseInt(selectedId1[1]);
+    var selectedId2 = selectedId1[1];
     console.log(answer.length);
-        for (var j= 0; j < answer[selectedId2].length; j++){
-            console.log(answer[selectedId2][j].correct);
-         if (answer[selectedId2][j].correct){
-            var correct = parseInt(j);
+    for (var i = 0; i < answer.length; i++){
+        for (var j= 0; j < answer[i].length; j++){
+            console.log(answer[i][j].correct);
+            if (answer[i][j].correct == true){
+            correct = j
             break;
              }
-        }  
+        }
+    }
     console.log(correct);
     var ch_question = {quiz_id, selectedId2, selected, correct};
     console.log(ch_question);
@@ -148,6 +151,9 @@ function checkQuizResult(selectedId, selected){
         success: function(result) {
            console.log("modul");
            console.log(result);
+           if (result.quiz_result_id.correct == correct){
+                result.quiz_result_id.correct == 'true'
+           }
            console.log(result.quiz_result_id.correct);
            quiz_results.text(result.quiz_result_id);
            $(anySlide).trigger('checkCompleted', result);
