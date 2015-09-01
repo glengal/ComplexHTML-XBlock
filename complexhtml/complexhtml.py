@@ -4,7 +4,7 @@ Author: Raymond Lucian Blaga
 Description: An HTML, JavaScript and CSS Editing XBlock that records student interactions if the course author wishes it.
 """
 
-import urllib, datetime, json, smtplib
+import urllib, datetime, json, smtplib, urllib2
 import matplotlib.pyplot as plt
 import numpy as np
 from pylab import *
@@ -79,17 +79,32 @@ class ComplexHTMLXBlock(XBlock):
 
     body_json = String(
         help="JSON container that can be used by the JavaScript code above",
-        default="{\"sample\": { \"subsample\": \"true\" }}", scope=Scope.content
+        default="{\"sample\": { \"subsample\": \"true\" }}",
+        scope=Scope.content
+    )
+
+    body_json_timestamp = String(
+        help="Timestamp from the last update made to body_json",
+        default="",
+        scope=Scope.content
     )
 
     body_css = String(
         help="CSS code for the block",
-        default="p { color: red }", scope=Scope.content
+        default="p { color: red }",
+        scope=Scope.content
     )
 
     settings_student = String(
         help="Student-specific settings for student view in JSON form; initially a copy of body_json",
-        default="", scope=Scope.user_state
+        default="",
+        scope=Scope.user_state
+    )
+
+    settings_student_timestamp = String(
+        help="Timestamp from the last update made to settings_student",
+        default="",
+        scope=Scope.user_state
     )
 
     grabbed = List(
@@ -113,7 +128,6 @@ class ComplexHTMLXBlock(XBlock):
         help="Completion status of this slide for the student.",
         default=False, scope=Scope.user_state
     )
-
 
     qz_attempted = Dict(
         help="Record how many attempts student have made",
@@ -191,6 +205,14 @@ class ComplexHTMLXBlock(XBlock):
             print ("= ComplexHTML: +--" + str(i))
 
         return content
+    @XBlock.json_handler
+    def get_scanpattern_array(self, data, suffix=''):
+        """
+        Get scanning pattern index and send back right or wrong answer
+        """
+        pattern_order = [1,0,1,2,1,5,1,4,1,3]
+        if data['pattern_index']:
+            return {"answer": true}
 
     @XBlock.json_handler
     def get_user_data(self, data, suffix=''):
@@ -291,18 +313,22 @@ class ComplexHTMLXBlock(XBlock):
         Update student settings from AJAX request
         """
         if self.settings_student != data["json_settings"]:
-            self.settings_student = data["json_settings"]
+            self.settings_student = json.dumps(data["json_settings"])
             return {"updated": "true"}
+
         return {"updated": "false"}
 
-    @staticmethod
-    def session_start(self):
+    @XBlock.json_handler
+    def session_start(self, data, suffix=''):
         """
         Start a new student session and record the time when it happens
         """
+
         self.session_ended = False
         print ("= ComplexHTML: Session started at: " + str(datetime.datetime.now()))
         self.sessions.append([str(datetime.datetime.now()), "", ""])
+
+        return {}
 
     @XBlock.json_handler
     def session_tick(self, data, suffix=''):
@@ -497,6 +523,15 @@ class ComplexHTMLXBlock(XBlock):
             return content
         return content
 
+    @staticmethod
+    def update_student_settings_backend(source, settings):
+        """
+        Returns dictionary that is source merged with settings
+        """
+        result = json.loads(source)
+        result.update(json.loads(settings))
+        return json.dumps(result)
+
     @XBlock.json_handler
     def get_clean_body_json(self, data, suffix=''):
         body_json = json.loads(self.settings_student)
@@ -540,10 +575,22 @@ class ComplexHTMLXBlock(XBlock):
         fragment = Fragment()
         content = {'self': self}
 
-        self.session_start(self)
-	self.n_user_id = self.get_student_id()
+        # copy over body_json to settings_student if the latter is blank
         if self.settings_student == "":
+            self.settings_student_timestamp = self.body_json_timestamp
             self.settings_student = self.body_json
+
+        # settings_student isn't blank
+        else:
+
+            # compare timestamps
+            if self.settings_student_timestamp != self.body_json_timestamp:
+
+                # settings_student is outdated in this case, it must be updated
+                self.settings_student = self.update_student_settings_backend(self.settings_student, self.body_json)
+                self.settings_student_timestamp = self.body_json_timestamp
+
+            # else all is in order, keep going
 
         body_html = self.generate_dependencies(self.dependencies) + unicode(self.generate_html(self.body_html))
 
@@ -579,7 +626,15 @@ class ComplexHTMLXBlock(XBlock):
         """
 
         fragment = Fragment()
-        content = {'self': self}
+        content = json.loads(load_resource("static/studio_settings.json"))
+        content['self'] = self
+
+        try:
+            urllib2.urlopen(content["CKEDITOR_URL"])
+        except urllib2.HTTPError, e:
+            content["CKEDITOR_URL"] = ""
+        except urllib2.URLError, e:
+            content["CKEDITOR_URL"] = ""
 
         if self.tick_interval < 1000:
             self.tick_interval = 86400000  # 24 hrs
@@ -604,7 +659,7 @@ class ComplexHTMLXBlock(XBlock):
         # Load Studio View
         fragment.add_content(render_template('templates/complexhtml_edit.html', content))
         fragment.add_css(load_resource('static/css/complexhtml_edit.css'))
-        fragment.add_javascript(load_resource('static/js/complexhtml_edit.js'))
+        fragment.add_javascript(unicode(render_template('static/js/complexhtml_edit.js', content)))
         fragment.initialize_js('ComplexHTMLXBlockStudio')
 
         return fragment
@@ -667,6 +722,7 @@ class ComplexHTMLXBlock(XBlock):
             self.body_html = data["body_html"]
             self.body_tracked = data["body_tracked"]
             self.body_json = data["body_json"]
+            self.body_json_timestamp = str(datetime.datetime.now())
             self.body_js_chunk_1 = data["body_js_chunk_1"]
             self.body_js_chunk_2 = data["body_js_chunk_2"]
             self.body_css = data["body_css"]

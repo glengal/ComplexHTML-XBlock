@@ -5,30 +5,39 @@ function ComplexHTMLXBlock(runtime, xblock_element) {
 attempted_on = $('.sstatus > .attempts');
 quiz_results = $('.status > .quiz_result');
 
-var json_settings = {},
-    json_clean_setting = {};
 var json_settings = {};
+var json_clean_setting = {};
 var session_tick = parseInt("{{ self.tick_interval }}");
 var tick_timer = "";
 
 // Load JSON settings from database
-$.ajax({
-    type: "POST",
-    url: runtime.handlerUrl(xblock_element, 'get_settings_student'),
-    data: JSON.stringify({}),
-    success: function(result) {
-        if (result.json_settings != "") json_settings = JSON.parse(result.json_settings);
-    },
-    async: false
-});
-
-// Mark this block as completed for the student
-function markCompleted() {
+function loadSettings() {
     $.ajax({
         type: "POST",
-        url: runtime.handlerUrl(xblock_element, 'complete_block'),
-        data: JSON.stringify({})
-    })
+        url: runtime.handlerUrl(xblock_element, 'get_settings_student'),
+        data: JSON.stringify({}),
+        success: function(result) {
+            if (result.json_settings != "") json_settings = JSON.parse(result.json_settings);
+        },
+        async: false
+    });
+}
+
+// Update student settings with the contents of json_settings
+function updateSettings(settings) {
+    if (settings) {
+        $.ajax({
+            type: "POST",
+            url: runtime.handlerUrl(xblock_element, 'update_student_settings'),
+            data: JSON.stringify({"json_settings": settings})
+        });
+    } else {
+        $.ajax({
+            type: "POST",
+            url: runtime.handlerUrl(xblock_element, 'update_student_settings'),
+            data: JSON.stringify({"json_settings": json_settings})
+        });
+    }
 }
 
 // Record an element click to the student's database entry
@@ -42,6 +51,10 @@ function recordClick(rec, type) {
             if (this.type != undefined) id = this.type;
             if (this.id != "") id = this.id;
             if (this.className != "" ) id = this.className;
+
+            if ("{{ self.dev_stuff }}" == "True") {
+                console.log("Student clicked on: " + id + ", of type " + this.type + ".");
+            }
 
             if (this.type === type || type === undefined) {
                 $.ajax({
@@ -79,15 +92,32 @@ function recordHover(rec, type) {
 
 }
 
-// Update student settings with the contents of json_settings
-function updateSettings(json_settings) {
-    if (json_settings) {
+// Mark this block as completed for the student
+function markCompleted() {
+    $.ajax({
+        type: "POST",
+        url: runtime.handlerUrl(xblock_element, 'complete_block'),
+        data: JSON.stringify({})
+    })
+}
+
+// Send the server the start of session message
+function session_start() {
+
+    loadSettings();
+    clearInterval(tick_timer);
+
+    if ($(".action-publish") === undefined) {
+
         $.ajax({
             type: "POST",
-            url: runtime.handlerUrl(xblock_element, 'update_student_settings'),
-            data: JSON.stringify({"json_settings": json_settings})
+            url: runtime.handlerUrl(xblock_element, 'session_start'),
+            data: JSON.stringify({}),
+            async: false
         });
+
     }
+
 }
 
 // Send the server the end of session message
@@ -95,12 +125,17 @@ function session_end() {
 
     clearInterval(tick_timer);
 
-    $.ajax({
-        type: "POST",
-        url: runtime.handlerUrl(xblock_element, 'session_end'),
-        data: JSON.stringify({}),
-        async: false
-    });
+    if ($(".action-publish") === undefined) {
+
+        $.ajax({
+            type: "POST",
+            url: runtime.handlerUrl(xblock_element, 'session_end'),
+            data: JSON.stringify({}),
+            async: false
+        });
+
+    }
+
 }
 
 function sendEmail(){
@@ -109,14 +144,23 @@ function sendEmail(){
             type: "POST",
             url: runtime.handlerUrl(xblock_element, 'get_user_data'),
             data: JSON.stringify({}),
-            //success: function(result){
-            //    user_id = result;
-            //}
         });
     console.log("Whats");
     console.log(user_id);
 
 }
+
+function checkScanPattern(){
+    $.ajax({
+        type: "POST",
+        url: runtime.handlerUrl(xblock_element, 'get_scanpattern_array'),
+        data: JSON.stringify({'pattern_index': pattern_index}),
+        success: function(result){
+           $(anySlide).trigger('checkCompleted', result);
+        }
+    });
+}
+
 function checkQuizResult(selectedId, selected){
     var answer = [];
     for (var j = 0; j < anySlide.options.quizzes.length; j++){
