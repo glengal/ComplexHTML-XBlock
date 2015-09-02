@@ -628,6 +628,7 @@ class ComplexHTMLXBlock(XBlock):
         fragment = Fragment()
         content = json.loads(load_resource("static/studio_settings.json"))
         content['self'] = self
+        self.n_user_id = self.get_student_id()
 
         try:
             urllib2.urlopen(content["CKEDITOR_URL"])
