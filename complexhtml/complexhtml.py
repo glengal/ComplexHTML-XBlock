@@ -22,7 +22,7 @@ class ComplexHTMLXBlock(XBlock):
 
     mysql_database  = 'edxapp'
     mysql_user      = 'root'
-    mysql_pwd       = ''
+    mysql_pwd       = '@v1@710npr0j53n3c@'
 
     display_name = String(
         display_name="ComplexHTML XBlock",
@@ -574,6 +574,7 @@ class ComplexHTMLXBlock(XBlock):
 
         fragment = Fragment()
         content = {'self': self}
+        self.n_user_id = self.get_student_id()
 
         # copy over body_json to settings_student if the latter is blank
         if self.settings_student == "":
