@@ -22,7 +22,7 @@ class ComplexHTMLXBlock(XBlock):
 
     mysql_database  = 'edxapp'
     mysql_user      = 'root'
-    mysql_pwd       = '@v1@710npr0j53n3c@'
+    mysql_pwd       = ''
 
     display_name = String(
         display_name="ComplexHTML XBlock",
@@ -629,7 +629,6 @@ class ComplexHTMLXBlock(XBlock):
         fragment = Fragment()
         content = json.loads(load_resource("static/studio_settings.json"))
         content['self'] = self
-        self.n_user_id = self.get_student_id()
 
         try:
             urllib2.urlopen(content["CKEDITOR_URL"])
