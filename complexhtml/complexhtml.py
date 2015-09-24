@@ -8,6 +8,7 @@ import urllib, datetime, json, smtplib, urllib2
 import matplotlib.pyplot as plt
 import numpy as np
 from pylab import *
+from pymongo import MongoClient
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEText import MIMEText
 from email.MIMEImage import MIMEImage
@@ -16,9 +17,9 @@ from django.template import Context, Template
 from xblock.core import XBlock
 from xblock.fields import Scope, Integer, List, String, Boolean, Dict
 from xblock.fragment import Fragment
-from xmodule.fields import RelativeTime
 
 class ComplexHTMLXBlock(XBlock):
+
 
     mysql_database  = 'edxapp'
     mysql_user      = 'root'
@@ -221,7 +222,6 @@ class ComplexHTMLXBlock(XBlock):
         """
         import dbconnection
 
-
         # init default data
         user_id    = "None"
         course_id  = "None"
@@ -297,6 +297,17 @@ class ComplexHTMLXBlock(XBlock):
             print ("Success")
         except:
             print ("Error")
+        """
+        Connection to mongodb
+        """
+        print ("Before mongo")
+        client = MongoClient()
+        db = client.edxapp
+        collection  = db.kc
+        cursor = collection.find({})
+        for i in cursor:
+            print ("Inside mongo")
+            print i
         return {'user': user_email}
 
     @XBlock.json_handler
@@ -562,11 +573,18 @@ class ComplexHTMLXBlock(XBlock):
                     for answer in quiz["json"]["questions"]:
                         for index, value in enumerate(answer["a"]):
                             if int(self.qz_attempted['correct']) == int(self.qz_attempted['selected']):
-                                correct_and_reason.update({'correct': 'true' })
+                                correct_and_reason.update({'correct': 'true'})
                             else:
-                                correct_and_reason.update({'correct': 'false' })
-        return {"quiz_result_id":correct_and_reason}
-
+                                correct_and_reason.update({'correct': 'false'})
+        for i in self.qz_attempted:
+            print i
+        return {"quiz_result_id": correct_and_reason}
+    def mongo_connect(self, data):
+        client = MongoClient()
+        db = client.edxapp
+        collection  = db.kc
+        for i in collection:
+            print i
     def student_view(self, context=None):
         """
         The student view

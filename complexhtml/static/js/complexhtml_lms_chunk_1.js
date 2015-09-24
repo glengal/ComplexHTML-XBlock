@@ -167,22 +167,20 @@ function checkQuizResult(selectedId, selected){
     answer[j]= anySlide.options.quizzes[j].json.questions[0].a;
     console.log(answer[j]);
     }
-    console.log(answer);
-    console.log("here");  
-    console.log(selectedId);
-    console.log(selected)
     var quiz_id = $('.cdot_quiz').attr('id');
     var selectedId1 = selectedId.split('_');
+    console.log(selectedId1);
     var selectedId2 = parseInt(selectedId1[1]);
-    console.log(answer.length);
+    console.log(selectedId2);
         for (var j= 0; j < answer[selectedId2].length; j++){
             console.log(answer[selectedId2][j].correct);
          if (answer[selectedId2][j].correct){
             var correct = parseInt(j);
+            console.log("Check correct");
+            console.log(correct);
             break;
              }
-        }  
-    console.log(correct);
+        }
     var ch_question = {quiz_id, selectedId2, selected, correct};
     console.log(ch_question);
     $.ajax({
