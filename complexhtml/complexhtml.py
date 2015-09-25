@@ -262,9 +262,9 @@ class ComplexHTMLXBlock(XBlock):
         db.query(q)
         res = db.fetchall()
         for row in res:
-            print row
+            #print row
             user_name = row[0]
-        print user_name
+        #print user_name
         # email
         q = "SELECT email FROM auth_user WHERE id='%s' " % (user_id)
         db.query(q)
@@ -289,27 +289,34 @@ class ComplexHTMLXBlock(XBlock):
         msgImage.add_header('Content-ID', '<image1>')
         msgRoot.attach(msgImage)
         try:
-            print ("INside")
+            #print ("INside")
+            self.mongo_connection(self.qz_attempted)
             smtpObj = smtplib.SMTP('localhost', 25)
             smtpObj.ehlo()
             smtpObj.sendmail(strFrom, strTo, msgRoot.as_string())
             smtpObj.quit()
-            print ("Success")
+            #print ("Success")
         except:
             print ("Error")
+        return {'user': user_email}
+    def mongo_connection(self, data):
         """
         Connection to mongodb
         """
         print ("Before mongo")
+        #print data["quiz_id"]
         client = MongoClient()
         db = client.edxapp
-        collection  = db.kc
-        cursor = collection.find({})
-        for i in cursor:
+        kc = db.kc
+        quizzes = db.quizzes
+        students = db.students
+        kc_cursor = kc.find({})
+        quiz_cursor = quizzes.find({})
+        quiz_info = {"name": data["quiz_id"], "showanswer": "try again"}
+        db.quizzes.insert(quiz_info)
+        for i in quiz_cursor:
             print ("Inside mongo")
             print i
-        return {'user': user_email}
-
     @XBlock.json_handler
     def clear_data(self, data, suffix=''):
         """
@@ -579,12 +586,6 @@ class ComplexHTMLXBlock(XBlock):
         for i in self.qz_attempted:
             print i
         return {"quiz_result_id": correct_and_reason}
-    def mongo_connect(self, data):
-        client = MongoClient()
-        db = client.edxapp
-        collection  = db.kc
-        for i in collection:
-            print i
     def student_view(self, context=None):
         """
         The student view
