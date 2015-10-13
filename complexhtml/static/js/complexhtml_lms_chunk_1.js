@@ -150,16 +150,6 @@ function sendEmail(){
 
 }
 
-function checkScanPattern(){
-    $.ajax({
-        type: "POST",
-        url: runtime.handlerUrl(xblock_element, 'get_scanpattern_array'),
-        data: JSON.stringify({'pattern_index': pattern_index}),
-        success: function(result){
-           $(anySlide).trigger('checkCompleted', result);
-        }
-    });
-}
 
 function checkQuizResult(selectedId, selected){
     var answer = [];

@@ -206,14 +206,6 @@ class ComplexHTMLXBlock(XBlock):
             print ("= ComplexHTML: +--" + str(i))
 
         return content
-    @XBlock.json_handler
-    def get_scanpattern_array(self, data, suffix=''):
-        """
-        Get scanning pattern index and send back right or wrong answer
-        """
-        pattern_order = [1,0,1,2,1,5,1,4,1,3]
-        if data['pattern_index']:
-            return {"answer": true}
 
     @XBlock.json_handler
     def get_user_data(self, data, suffix=''):
@@ -314,9 +306,9 @@ class ComplexHTMLXBlock(XBlock):
         quiz_cursor = quizzes.find({})
         quiz_info = {"name": data["quiz_id"], "showanswer": "try again"}
         db.quizzes.insert(quiz_info)
-        for i in quiz_cursor:
-            print ("Inside mongo")
-            print i
+        #for i in quiz_cursor:
+            #print ("Inside mongo")
+            #print i
     @XBlock.json_handler
     def clear_data(self, data, suffix=''):
         """
@@ -554,6 +546,7 @@ class ComplexHTMLXBlock(XBlock):
     def get_clean_body_json(self, data, suffix=''):
         body_json = json.loads(self.settings_student)
         return {"body_json_clean": body_json}
+
     def get_student_id(self):
         """
          Get data from student_id
@@ -568,13 +561,14 @@ class ComplexHTMLXBlock(XBlock):
         return s_id
 
     @XBlock.json_handler
-    def get_quiz_attempts(self, data, suffix=''):
+    def get_quiz_attempts(self, data, suffix =''):
         correct_and_reason = {}
         body_json = json.loads(self.body_json)
         if data['ch_question']:
             self.qz_attempted = data['ch_question'].copy()
+            self.get_conditionals()
         for index, value in enumerate(body_json["quizzes"]):
-            print self.qz_attempted['selectedId2']
+            print(self.qz_attempted['selectedId2'])
             if index == int(self.qz_attempted["selectedId2"]):
                 for quiz in body_json["quizzes"]:
                     for answer in quiz["json"]["questions"]:
@@ -583,9 +577,17 @@ class ComplexHTMLXBlock(XBlock):
                                 correct_and_reason.update({'correct': 'true'})
                             else:
                                 correct_and_reason.update({'correct': 'false'})
-        for i in self.qz_attempted:
-            print i
         return {"quiz_result_id": correct_and_reason}
+
+    def get_conditionals(self):
+        """
+        Get conditionals from instructor
+        """
+
+        print("SELF")
+        print(self.body_json)
+        return {"quiz_ids" : {} , "slideIds" : {}}
+
     def student_view(self, context=None):
         """
         The student view
