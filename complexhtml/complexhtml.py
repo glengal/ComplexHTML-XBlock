@@ -282,7 +282,6 @@ class ComplexHTMLXBlock(XBlock):
         msgRoot.attach(msgImage)
         try:
             #print ("INside")
-            self.mongo_connection(self.qz_attempted)
             smtpObj = smtplib.SMTP('localhost', 25)
             smtpObj.ehlo()
             smtpObj.sendmail(strFrom, strTo, msgRoot.as_string())
@@ -291,24 +290,26 @@ class ComplexHTMLXBlock(XBlock):
         except:
             print ("Error")
         return {'user': user_email}
-    def mongo_connection(self, data):
+    def mongo_connection(self, data, collection):
         """
         Connection to mongodb
         """
-        print ("Before mongo")
-        #print data["quiz_id"]
-        client = MongoClient()
-        db = client.edxapp
-        kc = db.kc
-        quizzes = db.quizzes
-        students = db.students
-        kc_cursor = kc.find({})
-        quiz_cursor = quizzes.find({})
-        quiz_info = {"name": data["quiz_id"], "showanswer": "try again"}
-        db.quizzes.insert(quiz_info)
-        #for i in quiz_cursor:
-            #print ("Inside mongo")
-            #print i
+        if collection != "":
+            print ("Before mongo")
+            print(collection)
+            #print data["quiz_id"]
+            client = MongoClient()
+            db = client.edxapp
+            collection_name = db.collection
+            collection_cursor = collection_name.find()
+            for result in collection_cursor:
+                print (result)
+            print ("End of the mongo")
+            #quiz_info = {"name": data["quiz_id"], "showanswer": "try again"}
+            #db.quizzes.insert(quiz_info)
+            #for i in quiz_cursor:
+                #print ("Inside mongo")
+                #print i
     @XBlock.json_handler
     def clear_data(self, data, suffix=''):
         """
@@ -583,9 +584,14 @@ class ComplexHTMLXBlock(XBlock):
         """
         Get conditionals from instructor
         """
-
+        conditionals = []
         print("SELF")
-        print(self.body_json)
+        con_json = json.loads(self.body_json)
+        for condition in con_json["conditions"]:
+            conditionals.append(condition)
+        for condition in conditionals:
+            print (condition)
+        self.mongo_connection(condition, "quizzes")
         return {"quiz_ids" : {} , "slideIds" : {}}
 
     def student_view(self, context=None):
