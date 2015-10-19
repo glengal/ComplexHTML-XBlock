@@ -297,13 +297,17 @@ class ComplexHTMLXBlock(XBlock):
         if collection != "":
             print ("Before mongo")
             print(collection)
-            #print data["quiz_id"]
+            print("Data")
+            print (data)
             client = MongoClient()
             db = client.edxapp
             collection_name = db.collection
             collection_cursor = collection_name.find()
-            for result in collection_cursor:
-                print (result)
+            if data and collection == "quizzes":
+                for dict in data:
+                    for slideId in dict:
+                        print (dict.get(slideId).get("quizId"))
+
             print ("End of the mongo")
             #quiz_info = {"name": data["quiz_id"], "showanswer": "try again"}
             #db.quizzes.insert(quiz_info)
@@ -564,20 +568,31 @@ class ComplexHTMLXBlock(XBlock):
     @XBlock.json_handler
     def get_quiz_attempts(self, data, suffix =''):
         correct_and_reason = {}
+        quiz_attempts = []
+        attempt = 0
         body_json = json.loads(self.body_json)
+        quizId = 0
         if data['ch_question']:
+            print (data['ch_question'])
+            //TODO
+
+            print ("Quiz ID")
+            print (quizId)
             self.qz_attempted = data['ch_question'].copy()
             self.get_conditionals()
-        for index, value in enumerate(body_json["quizzes"]):
-            print(self.qz_attempted['selectedId2'])
-            if index == int(self.qz_attempted["selectedId2"]):
-                for quiz in body_json["quizzes"]:
-                    for answer in quiz["json"]["questions"]:
-                        for index, value in enumerate(answer["a"]):
-                            if int(self.qz_attempted['correct']) == int(self.qz_attempted['selected']):
-                                correct_and_reason.update({'correct': 'true'})
-                            else:
-                                correct_and_reason.update({'correct': 'false'})
+        for item in xrange(len(body_json["quizzes"])):
+
+
+            quiz_attempts.append({'quizid' : item, 'attempts' : attempt})
+            if item == int(self.qz_attempted["selectedId2"]):
+                if int(self.qz_attempted['correct']) == int(self.qz_attempted['selected']):
+                    correct_and_reason.update({'correct': 'true'})
+                else:
+                    correct_and_reason.update({'correct': 'false'})
+        print("QUiZ_ATTEMPTS")
+        for item in quiz_attempts:
+            print (item)
+        print("End of attempts")
         return {"quiz_result_id": correct_and_reason}
 
     def get_conditionals(self):
@@ -587,11 +602,12 @@ class ComplexHTMLXBlock(XBlock):
         conditionals = []
         print("SELF")
         con_json = json.loads(self.body_json)
-        for condition in con_json["conditions"]:
-            conditionals.append(condition)
-        for condition in conditionals:
-            print (condition)
-        self.mongo_connection(condition, "quizzes")
+        if con_json["conditions"]:
+            for condition in con_json["conditions"]:
+                conditionals.append(condition)
+            for condition in conditionals:
+                print (condition)
+            self.mongo_connection(conditionals, "quizzes")
         return {"quiz_ids" : {} , "slideIds" : {}}
 
     def student_view(self, context=None):
