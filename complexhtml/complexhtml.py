@@ -8,6 +8,7 @@ import urllib, datetime, json, smtplib, urllib2
 import matplotlib.pyplot as plt
 import numpy as np
 from pylab import *
+from Queue import Queue
 from pymongo import MongoClient
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEText import MIMEText
@@ -568,32 +569,38 @@ class ComplexHTMLXBlock(XBlock):
     @XBlock.json_handler
     def get_quiz_attempts(self, data, suffix =''):
         correct_and_reason = {}
-        quiz_attempts = []
+        q_of_attempts = Queue(maxsize=0)
+        quiz_attempts = {}
         attempt = 0
         body_json = json.loads(self.body_json)
         quizId = 0
+        student_id = self.get_student_id()
+        print("Student_id")
+        print(student_id)
         if data['ch_question']:
+            q_of_attempts.put({'student_id' : student_id, 'quizid' : quizId, 'attempts' : attempt})
+            print ("Ch_question")
             print (data['ch_question'])
-            //TODO
+            for key, value in data['ch_question'].iteritems():
+                if key == "selectedQuizId":
+                   quizId = int(value)
+            quiz_attempts.update({'student_id' : student_id, 'quizid' : quizId, 'attempts' : attempt})
 
-            print ("Quiz ID")
-            print (quizId)
             self.qz_attempted = data['ch_question'].copy()
             self.get_conditionals()
         for item in xrange(len(body_json["quizzes"])):
 
-
-            quiz_attempts.append({'quizid' : item, 'attempts' : attempt})
-            if item == int(self.qz_attempted["selectedId2"]):
+            if item == int(self.qz_attempted["selectedQuizId"]):
                 if int(self.qz_attempted['correct']) == int(self.qz_attempted['selected']):
                     correct_and_reason.update({'correct': 'true'})
                 else:
                     correct_and_reason.update({'correct': 'false'})
-        print("QUiZ_ATTEMPTS")
-        for item in quiz_attempts:
-            print (item)
+        print("Queue")
+        while not q_of_attempts.empty():
+            print("Before")
+            print q_of_attempts.get()
         print("End of attempts")
-        return {"quiz_result_id": correct_and_reason}
+        return {"quiz_result_id": correct_and_reason, "q_of_attempts": q_of_attempts}
 
     def get_conditionals(self):
         """

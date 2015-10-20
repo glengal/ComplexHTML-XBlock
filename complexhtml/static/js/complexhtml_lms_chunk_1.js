@@ -159,19 +159,21 @@ function checkQuizResult(selectedId, selected){
     }
     var quiz_id = $('.cdot_quiz').attr('id');
     var selectedId1 = selectedId.split('_');
+    console.log("Selected");
     console.log(selectedId1);
-    var selectedId2 = parseInt(selectedId1[1]);
-    console.log(selectedId2);
-        for (var j= 0; j < answer[selectedId2].length; j++){
-            console.log(answer[selectedId2][j].correct);
-         if (answer[selectedId2][j].correct){
+    var selectedQuizId = parseInt(selectedId1[1]);
+    console.log(selectedQuizId);
+        for (var j= 0; j < answer[selectedQuizId].length; j++){
+            console.log(answer[selectedQuizId][j].correct);
+         if (answer[selectedQuizId][j].correct){
             var correct = parseInt(j);
             console.log("Check correct");
             console.log(correct);
             break;
              }
         }
-    var ch_question = {quiz_id, selectedId2, selected, correct};
+var ch_question = {quiz_id, selectedQuizId, selected, correct};
+    console.log("Ch_question value");
     console.log(ch_question);
     $.ajax({
         type: "POST",
