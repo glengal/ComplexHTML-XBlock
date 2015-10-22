@@ -7,8 +7,8 @@ Description: An HTML, JavaScript and CSS Editing XBlock that records student int
 import urllib, datetime, json, smtplib, urllib2
 import matplotlib.pyplot as plt
 import numpy as np
+from bson import ObjectId
 from pylab import *
-from Queue import Queue
 from pymongo import MongoClient
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEText import MIMEText
@@ -297,24 +297,26 @@ class ComplexHTMLXBlock(XBlock):
         """
         if collection != "":
             print ("Before mongo")
-            print(collection)
-            print("Data")
-            print (data)
             client = MongoClient()
             db = client.edxapp
-            collection_name = db.collection
-            collection_cursor = collection_name.find()
             if data and collection == "quizzes":
                 for dict in data:
                     for slideId in dict:
                         print (dict.get(slideId).get("quizId"))
-
+            elif data and collection == "students":
+                if db.students.find({"student_id" : data["student_id"], "quizzes": data["quizid"]}):
+                    mongo_attempt = db.students.find({"attempts" : data["attempts"]})
+                    for dict_attempt in mongo_attempt:
+                        print ("Dict attempt")
+                        print (dict_attempt["attempts"])
+                        #TODO attempts reload options
+                        attempt = int(dict_attempt["attempts"])
+                        attempt += 1
+                    db.students.update({"attempts": data['attempts']} , {"$set": {"attempts" : attempt}})
+                student_to_db = {"student_id": data["student_id"], "attempts": data["attempts"], "quizzes": data["quizid"]}
+                db.students.insert(student_to_db)
+                print ("Mongo student")
             print ("End of the mongo")
-            #quiz_info = {"name": data["quiz_id"], "showanswer": "try again"}
-            #db.quizzes.insert(quiz_info)
-            #for i in quiz_cursor:
-                #print ("Inside mongo")
-                #print i
     @XBlock.json_handler
     def clear_data(self, data, suffix=''):
         """
@@ -569,7 +571,6 @@ class ComplexHTMLXBlock(XBlock):
     @XBlock.json_handler
     def get_quiz_attempts(self, data, suffix =''):
         correct_and_reason = {}
-        q_of_attempts = Queue(maxsize=0)
         quiz_attempts = {}
         attempt = 0
         body_json = json.loads(self.body_json)
@@ -578,14 +579,13 @@ class ComplexHTMLXBlock(XBlock):
         print("Student_id")
         print(student_id)
         if data['ch_question']:
-            q_of_attempts.put({'student_id' : student_id, 'quizid' : quizId, 'attempts' : attempt})
             print ("Ch_question")
             print (data['ch_question'])
             for key, value in data['ch_question'].iteritems():
                 if key == "selectedQuizId":
                    quizId = int(value)
             quiz_attempts.update({'student_id' : student_id, 'quizid' : quizId, 'attempts' : attempt})
-
+            self.mongo_connection(quiz_attempts, "students")
             self.qz_attempted = data['ch_question'].copy()
             self.get_conditionals()
         for item in xrange(len(body_json["quizzes"])):
@@ -596,11 +596,10 @@ class ComplexHTMLXBlock(XBlock):
                 else:
                     correct_and_reason.update({'correct': 'false'})
         print("Queue")
-        while not q_of_attempts.empty():
-            print("Before")
-            print q_of_attempts.get()
+        print("Before")
+        print quiz_attempts
         print("End of attempts")
-        return {"quiz_result_id": correct_and_reason, "q_of_attempts": q_of_attempts}
+        return {"quiz_result_id": correct_and_reason}
 
     def get_conditionals(self):
         """
