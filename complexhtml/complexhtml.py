@@ -295,6 +295,7 @@ class ComplexHTMLXBlock(XBlock):
         """
         Connection to mongodb
         """
+
         if collection != "":
             print ("Before mongo")
             client = MongoClient()
@@ -305,16 +306,11 @@ class ComplexHTMLXBlock(XBlock):
                         print (dict.get(slideId).get("quizId"))
             elif data and collection == "students":
                 if db.students.find({"student_id" : data["student_id"], "quizzes": data["quizid"]}):
-                    mongo_attempt = db.students.find({"attempts" : data["attempts"]})
-                    for dict_attempt in mongo_attempt:
-                        print ("Dict attempt")
-                        print (dict_attempt["attempts"])
-                        #TODO attempts reload options
-                        attempt = int(dict_attempt["attempts"])
-                        attempt += 1
-                    db.students.update({"attempts": data['attempts']} , {"$set": {"attempts" : attempt}})
-                student_to_db = {"student_id": data["student_id"], "attempts": data["attempts"], "quizzes": data["quizid"]}
-                db.students.insert(student_to_db)
+                    cursor = db.students.find({"student_id" : data["student_id"], "quizzes": data["quizid"]})
+                    for object in cursor:
+                        attempt = int(object["attempts"])
+                    attempt += 1
+                    db.students.update({"attempts": object["attempts"]} , {"$set": {"attempts" : attempt}})
                 print ("Mongo student")
             print ("End of the mongo")
     @XBlock.json_handler
@@ -584,7 +580,9 @@ class ComplexHTMLXBlock(XBlock):
             for key, value in data['ch_question'].iteritems():
                 if key == "selectedQuizId":
                    quizId = int(value)
-            quiz_attempts.update({'student_id' : student_id, 'quizid' : quizId, 'attempts' : attempt})
+            print("Quiz value")
+            quiz_type = data["ch_question"]["quiz_id"].split("_")
+            quiz_attempts.update({'student_id' : student_id, 'quizid' : quizId, 'attempts' : attempt, "type": quiz_type[0]})
             self.mongo_connection(quiz_attempts, "students")
             self.qz_attempted = data['ch_question'].copy()
             self.get_conditionals()
