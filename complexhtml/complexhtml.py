@@ -295,7 +295,7 @@ class ComplexHTMLXBlock(XBlock):
         """
         Connection to mongodb
         """
-
+        print("End of runtime")
         if collection != "":
             print ("Before mongo")
             client = MongoClient()
@@ -305,13 +305,14 @@ class ComplexHTMLXBlock(XBlock):
                     for slideId in dict:
                         print (dict.get(slideId).get("quizId"))
             elif data and collection == "students":
-                if db.students.find({"student_id" : data["student_id"], "quizzes": data["quizid"]}):
-                    cursor = db.students.find({"student_id" : data["student_id"], "quizzes": data["quizid"]})
-                    for object in cursor:
-                        attempt = int(object["attempts"])
+                student = db.students.find_one({"student_id" : data["student_id"], "quizzes" : data["quizid"]})
+                if (student):
+                    attempt = student["attempts"]
                     attempt += 1
-                    db.students.update({"attempts": object["attempts"]} , {"$set": {"attempts" : attempt}})
-                print ("Mongo student")
+                    db.students.update({"attempts": student["attempts"]} , {"$set": {"attempts" : attempt}})
+                else:
+                    db.students.insert({"student_id" : data["student_id"], "quizzes" : data["quizid"], "type" : data["type"], "attempts" : data["attempts"]})
+            print ("Mongo student")
             print ("End of the mongo")
     @XBlock.json_handler
     def clear_data(self, data, suffix=''):
@@ -568,7 +569,7 @@ class ComplexHTMLXBlock(XBlock):
     def get_quiz_attempts(self, data, suffix =''):
         correct_and_reason = {}
         quiz_attempts = {}
-        attempt = 0
+        attempt = 1
         body_json = json.loads(self.body_json)
         quizId = 0
         student_id = self.get_student_id()
