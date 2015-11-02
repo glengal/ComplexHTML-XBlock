@@ -297,8 +297,8 @@ class ComplexHTMLXBlock(XBlock):
         Connection to mongodb
         """
         chapter = self.get_chapter()
-        print ("CHAPTER")
-        print (chapter)
+        sequential = self.get_sequential()
+        vertical = self.get_vertical()
         if collection != "":
             print ("Before mongo")
             client = MongoClient()
@@ -306,9 +306,10 @@ class ComplexHTMLXBlock(XBlock):
             dict_course = self.getDictCompleteCourseData(db.modulestore)
             print("MODULESTORE")
             snap_list = self.get_snaps(dict_course, chapter)
-            print("SNAP")
-            for snap in snap_list:
-                print snap
+            slide_list = self.get_slides(dict_course, sequential)
+            print("SLIDE")
+            for slide in slide_list:
+                print slide
             print("End of runtime")
             if data and collection == "quizzes":
                 for dict in data:
@@ -376,21 +377,52 @@ class ComplexHTMLXBlock(XBlock):
         Get current chapter from parent runtime
         """
         parent = self.get_parent()
-        chapter = str(parent.get_parent().parent).split("/")
-        return chapter[5]
+        chapter = str(parent.get_parent().parent).split("/")[::-1][0]
+        return chapter
 
-    def get_snaps(self,dict_course, chapter):
+    def get_sequential(self):
+        """
+        Get current sequential from parent runtime
+        """
+        parent = self.get_parent()
+        sequential = str(parent.parent).split("/")[::-1][0]
+        return sequential
+
+    def get_vertical(self):
+        """
+       Get current vertical from parent runtime
+       """
+        vertical = str(self.parent).split("/")[::-1][0]
+        return vertical
+
+    def get_snaps(self,dict_course, sequential):
         """
         Get Snaps from current chapter
         """
         snap_list = []
         if len(dict_course) > 0:
             for key, value in enumerate(dict_course):
-                if value.get("_id")["name"] == chapter and value.get("_id")["category"] == 'chapter':
+                if value.get("_id")["name"] == sequential and value.get("_id")["category"] == 'chapter':
                     children = value.get("definition")["children"]
-                    for snap in children:
-                        snap_list.append({"category" : "snap", "module_id" : snap, "name" : snap.split("/")[::-1][0]})
+                    if len(children) > 0:
+                        for snap in children:
+                            slides = self.get_slides(dict_course,snap.split('/')[::-1][0])
+                            snap_list.append({"category" : "snap", "module_id" : snap, "name" : snap.split("/")[::-1][0], "slides": slides})
         return snap_list
+
+    def get_slides(self, dict_course, chapter):
+        """
+        Get Slides from current chapter
+        """
+        slide_list = []
+        if len(dict_course) > 0:
+            for key, value in enumerate(dict_course):
+                if value.get('_id')['name']==chapter and value.get('_id')['category']=='sequential':
+                    children = value.get('definition')['children']
+                    if len(children) > 0:
+                        for k in children:
+                            slide_list.append( {'category': 'slide', 'module_id' : k, 'name' : k.split('/')[::-1][0]})
+        return slide_list
 
     @XBlock.json_handler
     def clear_data(self, data, suffix=''):
