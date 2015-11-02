@@ -4,7 +4,7 @@ Author: Raymond Lucian Blaga
 Description: An HTML, JavaScript and CSS Editing XBlock that records student interactions if the course author wishes it.
 """
 
-import urllib, datetime, json, smtplib, urllib2
+import urllib, datetime, json, smtplib, urllib2, sys, os, collections
 import matplotlib.pyplot as plt
 import numpy as np
 from bson import ObjectId
@@ -13,14 +13,14 @@ from pymongo import MongoClient
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEText import MIMEText
 from email.MIMEImage import MIMEImage
-from .utils import render_template, load_resource, resource_string
+from .utils import render_template, load_resource
 from django.template import Context, Template
 from xblock.core import XBlock
 from xblock.fields import Scope, Integer, List, String, Boolean, Dict
 from xblock.fragment import Fragment
+from xblock.runtime import Runtime
 
 class ComplexHTMLXBlock(XBlock):
-
 
     mysql_database  = 'edxapp'
     mysql_user      = 'root'
@@ -138,7 +138,9 @@ class ComplexHTMLXBlock(XBlock):
     n_user_id = String(
 	display_name="UserId", default="0", scope=Scope.user_state, help="Id of the current user"
     )
-
+    course_id = String(
+    default="None", scope=Scope.user_state, help="Id of the current course"
+    )
     has_score = True
     icon_class = 'other'
 
@@ -217,7 +219,6 @@ class ComplexHTMLXBlock(XBlock):
 
         # init default data
         user_id    = "None"
-        course_id  = "None"
         user_name  = "None"
         user_email = "None"
         course_ids = "None"
@@ -229,7 +230,7 @@ class ComplexHTMLXBlock(XBlock):
         res = db.fetchall()
         for row in res:
             user_id   = row[1]
-            course_id = row[2]
+            self.course_id = row[2]
         print user_id
         q = "SELECT course_id FROM student_courseenrollment WHERE user_id='%s' " % (user_id)
         db.query(q)
@@ -295,11 +296,20 @@ class ComplexHTMLXBlock(XBlock):
         """
         Connection to mongodb
         """
-        print("End of runtime")
+        chapter = self.get_chapter()
+        print ("CHAPTER")
+        print (chapter)
         if collection != "":
             print ("Before mongo")
             client = MongoClient()
             db = client.edxapp
+            dict_course = self.getDictCompleteCourseData(db.modulestore)
+            print("MODULESTORE")
+            snap_list = self.get_snaps(dict_course, chapter)
+            print("SNAP")
+            for snap in snap_list:
+                print snap
+            print("End of runtime")
             if data and collection == "quizzes":
                 for dict in data:
                     for slideId in dict:
@@ -312,8 +322,76 @@ class ComplexHTMLXBlock(XBlock):
                     db.students.update({"attempts": student["attempts"]} , {"$set": {"attempts" : attempt}})
                 else:
                     db.students.insert({"student_id" : data["student_id"], "quizzes" : data["quizid"], "type" : data["type"], "attempts" : data["attempts"]})
+                return {"student" : student}
             print ("Mongo student")
             print ("End of the mongo")
+
+    def setParseCourseId(self):
+        """
+        Parse course_id name
+        """
+        if self.course_id !='' and self.course_id !='None':
+            course  = self.course_id.split('/')
+            corg= course[0]
+            ccourse = course[1]
+            cname = course[2]
+            if corg!='' and ccourse!='' and cname!='':
+                return course
+            else:
+                return ''
+
+    def getDictCompleteCourseData(self,conn):
+        """
+        Get all data from mongo database
+        for the given course as a dictionary
+        """
+        course = self.setParseCourseId()
+        dict_course = []
+        if course!='':
+            corg = course[0]
+            ccourse = course[1]
+            cname = course[2]
+            res_query = conn.find({'_id.org': ''+corg+'', '_id.course': ''+ccourse+'' }, {'definition.children':1, 'definition.data.bg_id':1, 'metadata.weight':1})
+            if res_query:
+                for item in res_query:
+                    dict_course.append( self.getRecursiveData(item) )
+        return dict_course
+
+    def getRecursiveData(self,data):
+        """
+        Get data recursively
+        """
+        if isinstance(data, basestring):
+            return str(data)
+        elif isinstance(data, collections.Mapping):
+            return dict(map(self.getRecursiveData, data.iteritems()))
+        elif isinstance(data, collections.Iterable):
+            return type(data)(map(self.getRecursiveData, data))
+        else:
+            return data
+
+
+    def get_chapter(self):
+        """
+        Get current chapter from parent runtime
+        """
+        parent = self.get_parent()
+        chapter = str(parent.get_parent().parent).split("/")
+        return chapter[5]
+
+    def get_snaps(self,dict_course, chapter):
+        """
+        Get Snaps from current chapter
+        """
+        snap_list = []
+        if len(dict_course) > 0:
+            for key, value in enumerate(dict_course):
+                if value.get("_id")["name"] == chapter and value.get("_id")["category"] == 'chapter':
+                    children = value.get("definition")["children"]
+                    for snap in children:
+                        snap_list.append({"category" : "snap", "module_id" : snap, "name" : snap.split("/")[::-1][0]})
+        return snap_list
+
     @XBlock.json_handler
     def clear_data(self, data, suffix=''):
         """
@@ -567,6 +645,7 @@ class ComplexHTMLXBlock(XBlock):
 
     @XBlock.json_handler
     def get_quiz_attempts(self, data, suffix =''):
+
         correct_and_reason = {}
         quiz_attempts = {}
         attempt = 1
@@ -586,7 +665,6 @@ class ComplexHTMLXBlock(XBlock):
             quiz_attempts.update({'student_id' : student_id, 'quizid' : quizId, 'attempts' : attempt, "type": quiz_type[0]})
             self.mongo_connection(quiz_attempts, "students")
             self.qz_attempted = data['ch_question'].copy()
-            self.get_conditionals()
         for item in xrange(len(body_json["quizzes"])):
 
             if item == int(self.qz_attempted["selectedQuizId"]):
@@ -594,23 +672,27 @@ class ComplexHTMLXBlock(XBlock):
                     correct_and_reason.update({'correct': 'true'})
                 else:
                     correct_and_reason.update({'correct': 'false'})
+        self.get_conditionals(correct_and_reason)
         print("Queue")
         print("Before")
         print quiz_attempts
         print("End of attempts")
         return {"quiz_result_id": correct_and_reason}
 
-    def get_conditionals(self):
+    def get_conditionals(self, correct):
         """
         Get conditionals from instructor
         """
         conditionals = []
+        print ("Answer result")
+        print (correct)
         print("SELF")
         con_json = json.loads(self.body_json)
         if con_json["conditions"]:
             for condition in con_json["conditions"]:
                 conditionals.append(condition)
             for condition in conditionals:
+                print ("Condition")
                 print (condition)
             self.mongo_connection(conditionals, "quizzes")
         return {"quiz_ids" : {} , "slideIds" : {}}
