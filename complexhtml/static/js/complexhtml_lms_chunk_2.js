@@ -12,6 +12,8 @@ $(function ($) {
         console.log(json_clean_setting);
         json_clean_setting.parentSlide = anySlide;
         $(anySlide).on("completedQuiz", function(e,type,id){
+
+            console.log("Before Pattern" + type)
             if(type ===  "pattern"){
                 // id variable is now the id of the pattern only
                 // otherwise should all be quiz related

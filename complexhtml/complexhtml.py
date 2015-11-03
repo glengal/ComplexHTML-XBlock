@@ -292,40 +292,57 @@ class ComplexHTMLXBlock(XBlock):
         except:
             print ("Error")
         return {'user': user_email}
-    def mongo_connection(self, data, collection):
+    def mongo_connection(self):
         """
         Connection to mongodb
         """
+        client = MongoClient()
+        db = client.edxapp
+        return db
+
+    def toSlidesColection(self):
+        """
+        Write to Slides collection
+        """
+        db = self.mongo_connection()
         chapter = self.get_chapter()
         sequential = self.get_sequential()
         vertical = self.get_vertical()
-        if collection != "":
-            print ("Before mongo")
-            client = MongoClient()
-            db = client.edxapp
-            dict_course = self.getDictCompleteCourseData(db.modulestore)
-            print("MODULESTORE")
-            snap_list = self.get_snaps(dict_course, chapter)
-            slide_list = self.get_slides(dict_course, sequential)
-            print("SLIDE")
-            for slide in slide_list:
-                print slide
-            print("End of runtime")
-            if data and collection == "quizzes":
-                for dict in data:
-                    for slideId in dict:
-                        print (dict.get(slideId).get("quizId"))
-            elif data and collection == "students":
-                student = db.students.find_one({"student_id" : data["student_id"], "quizzes" : data["quizid"]})
-                if (student):
-                    attempt = student["attempts"]
-                    attempt += 1
-                    db.students.update({"attempts": student["attempts"]} , {"$set": {"attempts" : attempt}})
-                else:
-                    db.students.insert({"student_id" : data["student_id"], "quizzes" : data["quizid"], "type" : data["type"], "attempts" : data["attempts"]})
-                return {"student" : student}
-            print ("Mongo student")
-            print ("End of the mongo")
+        dict_course = self.getDictCompleteCourseData(db.modulestore)
+        snap_list = self.get_snaps(dict_course, chapter)
+        slide_list = self.get_slides(dict_course, sequential)
+        print("SLIDE")
+        slides = db.slides.find()
+        if (slides):
+            print ("Hello")
+        else:
+            db.slides.insert({"_id" : slide_list["name"], })
+        module_structure = {"chapter" : chapter, "sequential" : sequential, "vertical" : vertical}
+
+    def toStudentsCollection(self, data):
+        """
+        Write to Students collection
+        """
+        if data:
+            db = self.mongo_connection()
+            student = db.students.find_one({"student_id" : data["student_id"], "quizzes" : data["quizid"]})
+            if (student):
+                attempt = student["attempts"]
+                attempt += 1
+                db.students.update({"attempts": student["attempts"]} , {"$set": {"attempts" : attempt}})
+            else:
+                db.students.insert({"student_id" : data["student_id"], "quizzes" : data["quizid"], "type" : data["type"], "attempts" : data["attempts"]})
+            return {"student" : student}
+
+    def toQuizzesCollection(self, data):
+        """
+        Write to Quizzes collection
+        """
+        if data:
+            db = self.mongo_connection()
+            for dict in data:
+                for slideId in dict:
+                    print (dict.get(slideId).get("quizId"))
 
     def setParseCourseId(self):
         """
@@ -695,7 +712,7 @@ class ComplexHTMLXBlock(XBlock):
             print("Quiz value")
             quiz_type = data["ch_question"]["quiz_id"].split("_")
             quiz_attempts.update({'student_id' : student_id, 'quizid' : quizId, 'attempts' : attempt, "type": quiz_type[0]})
-            self.mongo_connection(quiz_attempts, "students")
+            self.toStudentsCollection(quiz_attempts)
             self.qz_attempted = data['ch_question'].copy()
         for item in xrange(len(body_json["quizzes"])):
 
@@ -705,6 +722,7 @@ class ComplexHTMLXBlock(XBlock):
                 else:
                     correct_and_reason.update({'correct': 'false'})
         self.get_conditionals(correct_and_reason)
+        self.toSlidesColection()
         print("Queue")
         print("Before")
         print quiz_attempts
@@ -726,7 +744,7 @@ class ComplexHTMLXBlock(XBlock):
             for condition in conditionals:
                 print ("Condition")
                 print (condition)
-            self.mongo_connection(conditionals, "quizzes")
+            self.toQuizzesCollection(conditionals)
         return {"quiz_ids" : {} , "slideIds" : {}}
 
     def student_view(self, context=None):
