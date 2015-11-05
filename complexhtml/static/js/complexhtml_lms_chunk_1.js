@@ -156,10 +156,7 @@ function conditionals(){
         success: function(result) {
         console.log(result);
         }
-        })
-
-
-}
+        });
 }
 
 
