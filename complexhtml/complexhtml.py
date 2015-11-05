@@ -312,11 +312,11 @@ class ComplexHTMLXBlock(XBlock):
         snap_list = self.get_snaps(dict_course, chapter)
         slide_list = self.get_slides(dict_course, sequential)
         print("SLIDE")
-        slides = db.slides.find()
-        if (slides):
+        slide = db.slides.find()
+        if (slide):
             print ("Hello")
         else:
-            db.slides.insert({"_id" : slide_list["name"], })
+            db.slides.insert({"_id" : slide_list["name"], "kc": {""}})
         module_structure = {"chapter" : chapter, "sequential" : sequential, "vertical" : vertical}
 
     def toStudentsCollection(self, data):
@@ -387,6 +387,39 @@ class ComplexHTMLXBlock(XBlock):
             return type(data)(map(self.getRecursiveData, data))
         else:
             return data
+
+    def fetchPatternAndQuiz(self, quizId, patternId, actionId):
+        """
+        Fetch pattern id and quiz id from SlideId collection
+        """
+        db = self.mongo_connection()
+        slides = db.slides.find()
+        slideId = self.get_vertical()
+        quizWeight = 0
+        patternWeight = 0
+        for key, value in enumerate(slides):
+            if value["_id"] == slideId:
+                quizList = value["quiz"]
+                for quiz in quizList:
+                    print ("Let see what's inside")
+                    type(quizId)
+                    type(quiz["id"])
+                    if quiz["id"] == quizId:
+                        quizWeight += quiz["weight"]
+                        print ("Success")
+                patternList = value["pattern"]
+                for pattern in patternList:
+                    if pattern["id"] == patternId and actionId == True:
+                        patternWeight = pattern["weight"]
+        self.calculateTotalWeight(quizWeight, patternWeight)
+
+    def calculateTotalWeight(self, quizWeight, patternWeight):
+        total = 0
+        condition_id = False
+        total += quizWeight + patternWeight
+        if total >= 80:
+            condition_id = True
+        return condition_id
 
 
     def get_chapter(self):
@@ -700,6 +733,8 @@ class ComplexHTMLXBlock(XBlock):
         attempt = 1
         body_json = json.loads(self.body_json)
         quizId = 0
+        patternId = 0
+        actionId = False
         student_id = self.get_student_id()
         print("Student_id")
         print(student_id)
@@ -709,6 +744,10 @@ class ComplexHTMLXBlock(XBlock):
             for key, value in data['ch_question'].iteritems():
                 if key == "selectedQuizId":
                    quizId = int(value)
+                if key == "patternId":
+                    patternId = value
+                if key == "actionId":
+                    actionId = value
             print("Quiz value")
             quiz_type = data["ch_question"]["quiz_id"].split("_")
             quiz_attempts.update({'student_id' : student_id, 'quizid' : quizId, 'attempts' : attempt, "type": quiz_type[0]})
@@ -721,31 +760,13 @@ class ComplexHTMLXBlock(XBlock):
                     correct_and_reason.update({'correct': 'true'})
                 else:
                     correct_and_reason.update({'correct': 'false'})
-        self.get_conditionals(correct_and_reason)
-        self.toSlidesColection()
+        self.fetchPatternAndQuiz(quizId,patternId, actionId)
         print("Queue")
         print("Before")
         print quiz_attempts
         print("End of attempts")
         return {"quiz_result_id": correct_and_reason}
 
-    def get_conditionals(self, correct):
-        """
-        Get conditionals from instructor
-        """
-        conditionals = []
-        print ("Answer result")
-        print (correct)
-        print("SELF")
-        con_json = json.loads(self.body_json)
-        if con_json["conditions"]:
-            for condition in con_json["conditions"]:
-                conditionals.append(condition)
-            for condition in conditionals:
-                print ("Condition")
-                print (condition)
-            self.toQuizzesCollection(conditionals)
-        return {"quiz_ids" : {} , "slideIds" : {}}
 
     def student_view(self, context=None):
         """

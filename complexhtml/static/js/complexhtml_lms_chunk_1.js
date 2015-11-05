@@ -149,9 +149,21 @@ function sendEmail(){
     console.log(user_id);
 
 }
+function conditionals(){
+    $.ajax({
+        type: "POST",
+        url: runtime.handlerUrl(xblock_element, 'calculateTotalWeight'),
+        success: function(result) {
+        console.log(result);
+        }
+        })
 
 
-function checkQuizResult(selectedId, selected){
+}
+}
+
+
+function checkQuizResult(selectedId, selected, patternId, actionId){
     var answer = [];
     for (var j = 0; j < anySlide.options.quizzes.length; j++){
     answer[j]= anySlide.options.quizzes[j].json.questions[0].a;
@@ -172,7 +184,7 @@ function checkQuizResult(selectedId, selected){
             break;
              }
         }
-var ch_question = {quiz_id, selectedQuizId, selected, correct};
+var ch_question = {quiz_id, selectedQuizId, selected, correct, patternId, actionId};
     console.log("Ch_question value");
     console.log(ch_question);
     $.ajax({

@@ -9,12 +9,17 @@ $(function ($) {
         anySlide = new AVIATION.common.Slide();
         anySlide.constructor(json_clean_setting);
         console.log("JSON");
+        var patternId = 0;
+        var actionId = false;
         console.log(json_clean_setting);
         json_clean_setting.parentSlide = anySlide;
-        $(anySlide).on("completedQuiz", function(e,type,id){
+        $(anySlide).on("completedQuiz", function(e,options){
 
-            console.log("Before Pattern" + type)
-            if(type ===  "pattern"){
+            console.log("Before Pattern")
+            if(options.type ===  "action"){
+                console.log("ActionId");
+                patternId = options.patternId;
+                actionId = options.actionId;
                 // id variable is now the id of the pattern only
                 // otherwise should all be quiz related
             } else {
@@ -29,7 +34,7 @@ $(function ($) {
                 var selected = sel[3];
 
                 console.log("Got");
-                checkQuizResult(checked,selected);
+                checkQuizResult(checked,selected, patternId, actionId);
                 sendEmail();
             }
         });
