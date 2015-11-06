@@ -16,8 +16,10 @@ $(function ($) {
         $(anySlide).on("completedQuiz", function(e,options){
 
             console.log("Before Pattern")
-            if(options.type ===  "action"){
+            if(options && options.type ===  "action"){
                 console.log("ActionId");
+                console.log(options.patternId);
+                console.log(options.actionId);
                 patternId = options.patternId;
                 actionId = options.actionId;
                 // id variable is now the id of the pattern only
@@ -35,7 +37,8 @@ $(function ($) {
 
                 console.log("Got");
                 checkQuizResult(checked,selected, patternId, actionId);
-                sendEmail();
+                //sendEmail();
+                conditionals();
             }
         });
     });

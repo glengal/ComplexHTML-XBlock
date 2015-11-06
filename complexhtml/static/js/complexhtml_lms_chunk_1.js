@@ -152,10 +152,8 @@ function sendEmail(){
 function conditionals(){
     $.ajax({
         type: "POST",
-        url: runtime.handlerUrl(xblock_element, 'calculateTotalWeight'),
-        success: function(result) {
-        console.log(result);
-        }
+        url: runtime.handlerUrl(xblock_element, 'to_Send'),
+        data: JSON.stringify({})
         });
 }
 

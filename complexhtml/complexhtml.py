@@ -7,7 +7,6 @@ Description: An HTML, JavaScript and CSS Editing XBlock that records student int
 import urllib, datetime, json, smtplib, urllib2, sys, os, collections
 import matplotlib.pyplot as plt
 import numpy as np
-from bson import ObjectId
 from pylab import *
 from pymongo import MongoClient
 from email.MIMEMultipart import MIMEMultipart
@@ -18,7 +17,6 @@ from django.template import Context, Template
 from xblock.core import XBlock
 from xblock.fields import Scope, Integer, List, String, Boolean, Dict
 from xblock.fragment import Fragment
-from xblock.runtime import Runtime
 
 class ComplexHTMLXBlock(XBlock):
 
@@ -141,6 +139,10 @@ class ComplexHTMLXBlock(XBlock):
     course_id = String(
     default="None", scope=Scope.user_state, help="Id of the current course"
     )
+    conditional_id = Boolean(
+        display_name = "Conditional", default = False, scope=Scope.user_state
+    )
+
     has_score = True
     icon_class = 'other'
 
@@ -292,6 +294,7 @@ class ComplexHTMLXBlock(XBlock):
         except:
             print ("Error")
         return {'user': user_email}
+
     def mongo_connection(self):
         """
         Connection to mongodb
@@ -388,7 +391,7 @@ class ComplexHTMLXBlock(XBlock):
         else:
             return data
 
-    def fetchPatternAndQuiz(self, quizId, patternId, actionId):
+    def fetchPatternAndQuiz(self, data):
         """
         Fetch pattern id and quiz id from SlideId collection
         """
@@ -397,30 +400,45 @@ class ComplexHTMLXBlock(XBlock):
         slideId = self.get_vertical()
         quizWeight = 0
         patternWeight = 0
+        print ("ActionID")
         for key, value in enumerate(slides):
             if value["_id"] == slideId:
                 quizList = value["quiz"]
                 for quiz in quizList:
-                    print ("Let see what's inside")
-                    type(quizId)
-                    type(quiz["id"])
-                    if quiz["id"] == quizId:
-                        quizWeight += quiz["weight"]
-                        print ("Success")
+                    if int(quiz["id"]) == data["quizId"]:
+                        print ("Let see what's inside")
+                        quizWeight += int(quiz["weight"])
+                        print (quizWeight)
+                    print ("Success")
                 patternList = value["pattern"]
                 for pattern in patternList:
-                    if pattern["id"] == patternId and actionId == True:
-                        patternWeight = pattern["weight"]
-        self.calculateTotalWeight(quizWeight, patternWeight)
+                    if int(pattern["id"]) == data["patternId"] :
+                        print ("Patternweight")
+                        patternWeight += int(pattern["weight"])
+                        print patternWeight
+        self.calculateTotalWeight(quizWeight, patternWeight )
 
-    def calculateTotalWeight(self, quizWeight, patternWeight):
+    def calculateTotalWeight(self, quizWeight, patternWeight, suffix=''):
+        """
+        Calculate total weight for knowledge component on slide
+        """
         total = 0
-        condition_id = False
-        total += quizWeight + patternWeight
+        print quizWeight
+        print patternWeight
+        total = quizWeight + patternWeight
+        print("Total")
+        print(total)
         if total >= 80:
-            condition_id = True
-        return condition_id
+            self.conditional_id = True
+        print("Conditional")
+        print(self.conditional_id)
 
+    @XBlock.json_handler
+    def to_Send(self, data, suffix=''):
+        """
+        Function that sends the condition of to proceed or not to next slide
+        """
+        return {"conditional_id" : self.conditional_id}
 
     def get_chapter(self):
         """
@@ -760,7 +778,8 @@ class ComplexHTMLXBlock(XBlock):
                     correct_and_reason.update({'correct': 'true'})
                 else:
                     correct_and_reason.update({'correct': 'false'})
-        self.fetchPatternAndQuiz(quizId,patternId, actionId)
+        result = {"quizId": quizId, "patternId": patternId, "actionId": actionId}
+        self.fetchPatternAndQuiz(result)
         print("Queue")
         print("Before")
         print quiz_attempts
