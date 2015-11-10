@@ -91,7 +91,7 @@ class ComplexHTMLXBlock(XBlock):
 
     body_css = String(
         help="CSS code for the block",
-        default="p { color: red }",
+        default=".placeholderText { color: red }",
         scope=Scope.content
     )
 
@@ -557,6 +557,8 @@ class ComplexHTMLXBlock(XBlock):
 
     @staticmethod
     def get_num_sessions(self):
+        print ("Self sessions")
+        print self.sessions
         return len(self.sessions)
 
     @XBlock.json_handler
