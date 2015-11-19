@@ -17,7 +17,7 @@ function loadSettings() {
         url: runtime.handlerUrl(xblock_element, 'get_settings_student'),
         data: JSON.stringify({}),
         success: function(result) {
-            if (result.json_settings != "") json_settings = JSON.parse(result.json_settings);
+            if (result.json_settings !== "") {json_settings = JSON.parse(result.json_settings);}
         },
         async: false
     });
@@ -48,11 +48,11 @@ function recordClick(rec, type) {
         function (eventObject) {
 
             var id = this.tagName;
-            if (this.type != undefined) id = this.type;
-            if (this.id != "") id = this.id;
-            if (this.className != "" ) id = this.className;
+            if (this.type !== undefined) {id = this.type;}
+            if (this.id !== "") {id = this.id;}
+            if (this.className !== "" ) {id = this.className;}
 
-            if ("{{ self.dev_stuff }}" == "True") {
+            if ("{{ self.dev_stuff }}" === "True") {
                 console.log("Student clicked on: " + id + ", of type " + this.type + ".");
             }
 
@@ -60,7 +60,7 @@ function recordClick(rec, type) {
                 $.ajax({
                     type: "POST",
                     url: runtime.handlerUrl(xblock_element, 'grab_data'),
-                    data: JSON.stringify({"id": id, "type": ((this.type != undefined) ? this.type : this.tagName) + "_click"})
+                    data: JSON.stringify({"id": id, "type": ((this.type !== undefined) ? this.type : this.tagName) + "_click"})
                 });
             }
 
@@ -76,15 +76,15 @@ function recordHover(rec, type) {
         function (eventObject) {
 
             var id = this.tagName;
-            if (this.type != undefined) id = this.type;
-            if (this.id != "") id = this.id;
-            if (this.className != "" ) id = this.className;
+            if (this.type !== undefined) {id = this.type;}
+            if (this.id !== "") {id = this.id;}
+            if (this.className !== "" ) {id = this.className;}
 
             if (this.type === type || type === undefined) {
                 $.ajax({
                     type: "POST",
                     url: runtime.handlerUrl(xblock_element, 'grab_data'),
-                    data: JSON.stringify({"id": id, "type": ((this.type != undefined) ? this.type : this.tagName) + "_hover"})
+                    data: JSON.stringify({"id": id, "type": ((this.type !== undefined) ? this.type : this.tagName) + "_hover"})
                 });
             }
 
@@ -98,7 +98,7 @@ function markCompleted() {
         type: "POST",
         url: runtime.handlerUrl(xblock_element, 'complete_block'),
         data: JSON.stringify({})
-    })
+    });
 }
 
 // Send the server the start of session message
@@ -152,7 +152,7 @@ function sendEmail(){
 function conditionals(){
     $.ajax({
         type: "POST",
-        url: runtime.handlerUrl(xblock_element, 'to_Send'),
+        url: runtime.handlerUrl(xblock_element, 'to_send'),
         data: JSON.stringify({})
         });
 }
@@ -170,10 +170,10 @@ function checkQuizResult(selectedId, selected, patternId, actionId){
     console.log(selectedId1);
     var selectedQuizId = parseInt(selectedId1[1]);
     console.log(selectedQuizId);
-        for (var j= 0; j < answer[selectedQuizId].length; j++){
-            console.log(answer[selectedQuizId][j].correct);
-         if (answer[selectedQuizId][j].correct){
-            var correct = parseInt(j);
+        for (var i = 0; i < answer[selectedQuizId].length; i++){
+            console.log(answer[selectedQuizId][i].correct);
+         if (answer[selectedQuizId][i].correct){
+            var correct = parseInt(i);
             console.log("Check correct");
             console.log(correct);
             break;
@@ -205,20 +205,10 @@ function getCleanBody(callback){
             json_clean_setting = result.body_json_clean;
             console.log("testing");
             console.log(json_clean_setting);
-            if (json_clean_setting.quizzes){
-            for (i = 0; i < json_clean_setting.quizzes.length; i++){
-                for (j = 0; j < json_clean_setting.quizzes[i].json.questions.length; j++){
-                    for (k = 0 ; k < json_clean_setting.quizzes[i].json.questions[j].a.length; k++){
-                        //if (json_clean_setting.quizzes[i].json.questions[j].a[k].correct == true)
-                        //  json_clean_setting.quizzes[i].json.questions[j].a[k].correct = false;                  
-                    }
-                }
-            }        
-          }
           if(callback && typeof callback === 'function'){
             callback(json_clean_setting);
           }
         }
     });
 
-}   
+}

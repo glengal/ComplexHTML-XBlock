@@ -326,16 +326,20 @@ class ComplexHTMLXBlock(XBlock):
         """
         Write to Students collection
         """
+        # TODO add slide id to tsudent collection and add total weight for each attempt
+
         if data:
             db = self.mongo_connection()
-            student = db.students.find_one({"student_id" : data["student_id"], "quizzes" : data["quizid"]})
+            student = db.students.find_one({"_id" : data["student_id"], "quizzes.index" : data["quizid"]})
+            print "Before"
+            print student
             if (student):
-                attempt = student["attempts"]
-                attempt += 1
-                db.students.update({"attempts": student["attempts"]} , {"$set": {"attempts" : attempt}})
+                 attempt = student.get("quizzes")["attempts"]
+                 attempt += 1
+                 db.students.update({"quizzes.attempts": student.get("quizzes")["attempts"]} , {"$set": {"quizzes.attempts" : attempt}})
             else:
-                db.students.insert({"student_id" : data["student_id"], "quizzes" : data["quizid"], "type" : data["type"], "attempts" : data["attempts"]})
-            return {"student" : student}
+                db.students.insert({"_id" : data["student_id"], "quizzes" : {"index" : data["quizid"], "attempts" : data["attempts"]}, "type" : data["type"]})
+        return {"student" : student}
 
     def toQuizzesCollection(self, data):
         """
@@ -434,7 +438,7 @@ class ComplexHTMLXBlock(XBlock):
         print(self.conditional_id)
 
     @XBlock.json_handler
-    def to_Send(self, data, suffix=''):
+    def to_send(self, data, suffix=''):
         """
         Function that sends the condition of to proceed or not to next slide
         """

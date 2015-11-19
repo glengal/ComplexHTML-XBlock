@@ -15,7 +15,7 @@ $(function ($) {
         json_clean_setting.parentSlide = anySlide;
         $(anySlide).on("completedQuiz", function(e,options){
 
-            console.log("Before Pattern")
+            console.log("Before Pattern");
             if(options && options.type ===  "action"){
                 console.log("ActionId");
                 console.log(options.patternId);
