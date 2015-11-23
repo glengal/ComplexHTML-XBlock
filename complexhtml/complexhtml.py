@@ -142,7 +142,9 @@ class ComplexHTMLXBlock(XBlock):
     conditional_id = Boolean(
         display_name = "Conditional", default = False, scope=Scope.user_state
     )
-
+    totalWeight = Integer(
+        default= 0, scope=Scope.user_state
+    )
     has_score = True
     icon_class = 'other'
 
@@ -330,15 +332,15 @@ class ComplexHTMLXBlock(XBlock):
 
         if data:
             db = self.mongo_connection()
-            student = db.students.find_one({"_id" : data["student_id"], "quizzes.index" : data["quizid"]})
-            print "Before"
-            print student
+            slideid = self.get_vertical()
+            student = db.students.find_one({"_id" : data["student_id"], "slides.slide_id" : slideid, "slides.quizzes.quiz_id" : data["quizid"]})
             if (student):
-                 attempt = student.get("quizzes")["attempts"]
-                 attempt += 1
-                 db.students.update({"quizzes.attempts": student.get("quizzes")["attempts"]} , {"$set": {"quizzes.attempts" : attempt}})
+                print ("Student exists")
+                attempt = student.get("slides")["quizzes"]["attempts"]["attempt"]
+                attempt += 1
+                db.students.update({"_id": data["student"]} , {"$push": {"slides.quizzes.attempts.attempt" : attempt, "slides.attempts.kc": self.totalWeight}})
             else:
-                db.students.insert({"_id" : data["student_id"], "quizzes" : {"index" : data["quizid"], "attempts" : data["attempts"]}, "type" : data["type"]})
+                db.students.insert({"_id" : data["student_id"],"slides":{"slide_id" : slideid, "quizzes" : {"quiz_id" : data["quizid"], "attempts":{ "attempt":data["attempts"], "kc": self.totalWeight}, "type" : data["type"]}}})
         return {"student" : student}
 
     def toQuizzesCollection(self, data):
@@ -404,38 +406,28 @@ class ComplexHTMLXBlock(XBlock):
         slideId = self.get_vertical()
         quizWeight = 0
         patternWeight = 0
-        print ("ActionID")
         for key, value in enumerate(slides):
             if value["_id"] == slideId:
                 quizList = value["quiz"]
                 for quiz in quizList:
                     if int(quiz["id"]) == data["quizId"]:
-                        print ("Let see what's inside")
                         quizWeight += int(quiz["weight"])
-                        print (quizWeight)
-                    print ("Success")
                 patternList = value["pattern"]
                 for pattern in patternList:
                     if int(pattern["id"]) == data["patternId"] :
-                        print ("Patternweight")
                         patternWeight += int(pattern["weight"])
-                        print patternWeight
         self.calculateTotalWeight(quizWeight, patternWeight )
 
     def calculateTotalWeight(self, quizWeight, patternWeight, suffix=''):
         """
         Calculate total weight for knowledge component on slide
         """
-        total = 0
-        print quizWeight
-        print patternWeight
-        total = quizWeight + patternWeight
-        print("Total")
-        print(total)
-        if total >= 80:
+        self.totalWeight = quizWeight + patternWeight
+        print ("Total")
+        print (quizWeight)
+        print (patternWeight)
+        if self.totalWeight >= 80:
             self.conditional_id = True
-        print("Conditional")
-        print(self.conditional_id)
 
     @XBlock.json_handler
     def to_send(self, data, suffix=''):
