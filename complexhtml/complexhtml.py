@@ -335,12 +335,15 @@ class ComplexHTMLXBlock(XBlock):
             slideid = self.get_vertical()
             student = db.students.find_one({"_id" : data["student_id"], "slides.slide_id" : slideid, "slides.quizzes.quiz_id" : data["quizid"]})
             if (student):
-                print ("Student exists")
-                attempt = student.get("slides")["quizzes"]["attempts"]["attempt"]
+                for slide in student.get("slides"):
+                    for quiz in slide["quizzes"]:
+                        for attempt in quiz["attempts"]:
+                            attempt = attempt["attempt"]
                 attempt += 1
-                db.students.update({"_id": data["student"]} , {"$push": {"slides.quizzes.attempts.attempt" : attempt, "slides.attempts.kc": self.totalWeight}})
+
+                db.students.update({"_id": data["student_id"]} , {"$addToSet": {"slides":{"quizzes": {"attempts":{"attempt": attempt, "kc": self.totalWeight}}}}})
             else:
-                db.students.insert({"_id" : data["student_id"],"slides":{"slide_id" : slideid, "quizzes" : {"quiz_id" : data["quizid"], "attempts":{ "attempt":data["attempts"], "kc": self.totalWeight}, "type" : data["type"]}}})
+                db.students.insert({"_id" : data["student_id"],"slides":[{"slide_id" : slideid, "quizzes" : [{"quiz_id" : data["quizid"], "attempts": [{ "attempt":data["attempts"], "kc": self.totalWeight}], "type" : data["type"]}]}]})
         return {"student" : student}
 
     def toQuizzesCollection(self, data):
