@@ -328,8 +328,6 @@ class ComplexHTMLXBlock(XBlock):
         """
         Write to Students collection
         """
-        # TODO add slide id to tsudent collection and add total weight for each attempt
-
         if data:
             db = self.mongo_connection()
             slideid = self.get_vertical()
@@ -340,8 +338,8 @@ class ComplexHTMLXBlock(XBlock):
                         for attempt in quiz["attempts"]:
                             attempt = attempt["attempt"]
                 attempt += 1
-
-                db.students.update({"_id": data["student_id"]} , {"$addToSet": {"slides":{"quizzes": {"attempts":{"attempt": attempt, "kc": self.totalWeight}}}}})
+                print attempt
+                db.students.update({"_id": data["student_id"],"slides.slide_id": slideid, "slides.quizzes.quiz_id": data["quizid"]} , {"$push": {"slides.0.quizzes.$.attempts":{"attempt": attempt, "kc": self.totalWeight}}})
             else:
                 db.students.insert({"_id" : data["student_id"],"slides":[{"slide_id" : slideid, "quizzes" : [{"quiz_id" : data["quizid"], "attempts": [{ "attempt":data["attempts"], "kc": self.totalWeight}], "type" : data["type"]}]}]})
         return {"student" : student}
