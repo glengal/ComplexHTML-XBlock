@@ -157,6 +157,14 @@ function conditionals(){
         });
 }
 
+function kcTotalWeight(){
+    $.ajax({
+        type: "POST",
+        url: runtime.handlerUrl(xblock_element, 'to_send_kc'),
+        data: JSON.stringify({})
+        });
+}
+
 
 function checkQuizResult(selectedId, selected, patternId, actionId){
     var answer = [];

@@ -39,6 +39,7 @@ $(function ($) {
                 checkQuizResult(checked,selected, patternId, actionId);
                 //sendEmail();
                 conditionals();
+                kcTotalWeight();
             }
         });
     });

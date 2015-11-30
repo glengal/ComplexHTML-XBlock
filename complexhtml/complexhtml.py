@@ -342,7 +342,6 @@ class ComplexHTMLXBlock(XBlock):
                 db.students.update({"_id": data["student_id"],"slides.slide_id": slideid, "slides.quizzes.quiz_id": data["quizid"]} , {"$push": {"slides.0.quizzes.$.attempts":{"attempt": attempt, "kc": self.totalWeight}}})
             else:
                 db.students.insert({"_id" : data["student_id"],"slides":[{"slide_id" : slideid, "quizzes" : [{"quiz_id" : data["quizid"], "attempts": [{ "attempt":data["attempts"], "kc": self.totalWeight}], "type" : data["type"]}]}]})
-        return {"student" : student}
 
     def toQuizzesCollection(self, data):
         """
@@ -419,6 +418,17 @@ class ComplexHTMLXBlock(XBlock):
                         patternWeight += int(pattern["weight"])
         self.calculateTotalWeight(quizWeight, patternWeight )
 
+    #TODO Pass student id if display kc for student and id's if for instructor
+    def fetchKcFromStudentsCollection(self, studentIdArray):
+        db = self.mongo_connection()
+        if (studentIdArray):
+            if len(studentIdArray) > 0:
+                #TODO loop through database and fetch result for each id and store in list
+            else:
+                kcResultCursor = db.students.find({"_id" : studentIdArray[0]})
+                for key, studentValue in enumerate(kcResultCursor):
+                    studentValue.get("slides")
+                    #TODO get kc for one student and send it to Chunk 2 and then to CreateSlide
     def calculateTotalWeight(self, quizWeight, patternWeight, suffix=''):
         """
         Calculate total weight for knowledge component on slide
@@ -436,6 +446,13 @@ class ComplexHTMLXBlock(XBlock):
         Function that sends the condition of to proceed or not to next slide
         """
         return {"conditional_id" : self.conditional_id}
+
+    @XBlock.json_handler
+    def to_send_kc(self, data, suffix=''):
+        """
+        Function that sends the condition of to proceed or not to next slide
+        """
+        return {"kc" : self.totalWeight}
 
     def get_chapter(self):
         """
