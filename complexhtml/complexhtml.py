@@ -324,11 +324,14 @@ class ComplexHTMLXBlock(XBlock):
             db.slides.insert({"_id" : slide_list["name"], "kc": {""}})
         module_structure = {"chapter" : chapter, "sequential" : sequential, "vertical" : vertical}
 
-    def toStudentsCollection(self, data):
+    def toStudentsCollection(self, data, correct_and_reason):
         """
         Write to Students collection
         """
+        self.fetchKcFromStudentsCollection()
         if data:
+            print ("Student Collection")
+            print correct_and_reason
             db = self.mongo_connection()
             slideid = self.get_vertical()
             student = db.students.find_one({"_id" : data["student_id"], "slides.slide_id" : slideid, "slides.quizzes.quiz_id" : data["quizid"]})
@@ -339,9 +342,9 @@ class ComplexHTMLXBlock(XBlock):
                             attempt = attempt["attempt"]
                 attempt += 1
                 print attempt
-                db.students.update({"_id": data["student_id"],"slides.slide_id": slideid, "slides.quizzes.quiz_id": data["quizid"]} , {"$push": {"slides.0.quizzes.$.attempts":{"attempt": attempt, "kc": self.totalWeight}}})
+                db.students.update({"_id": data["student_id"],"slides.slide_id": slideid, "slides.quizzes.quiz_id": data["quizid"]} , {"$push": {"slides.0.quizzes.$.attempts":{"attempt": attempt, "kc": self.totalWeight, "answer_result": correct_and_reason["correct"]}}})
             else:
-                db.students.insert({"_id" : data["student_id"],"slides":[{"slide_id" : slideid, "quizzes" : [{"quiz_id" : data["quizid"], "attempts": [{ "attempt":data["attempts"], "kc": self.totalWeight}], "type" : data["type"]}]}]})
+                db.students.insert({"_id" : data["student_id"],"slides":[{"slide_id" : slideid, "quizzes" : [{"quiz_id" : data["quizid"], "attempts": [{ "attempt":data["attempts"], "kc": self.totalWeight, "answer_result": correct_and_reason["correct"]}], "type" : data["type"]}]}]})
 
     def toQuizzesCollection(self, data):
         """
@@ -418,17 +421,34 @@ class ComplexHTMLXBlock(XBlock):
                         patternWeight += int(pattern["weight"])
         self.calculateTotalWeight(quizWeight, patternWeight )
 
-    #TODO Pass student id if display kc for student and id's if for instructor
-    def fetchKcFromStudentsCollection(self, studentIdArray):
+    def fetchKcFromStudentsCollection(self): #studentGraph):
+        #Testing
+        studentGraph = False
+        result = []
+        #testing
         db = self.mongo_connection()
-        if (studentIdArray):
-            if len(studentIdArray) > 0:
-                #TODO loop through database and fetch result for each id and store in list
-            else:
-                kcResultCursor = db.students.find({"_id" : studentIdArray[0]})
-                for key, studentValue in enumerate(kcResultCursor):
-                    studentValue.get("slides")
-                    #TODO get kc for one student and send it to Chunk 2 and then to CreateSlide
+        if (studentGraph):
+            student_id = self.get_student_id()
+            kcResultCursor = db.students.find({"_id" : student_id})
+            for key, studentValue in enumerate(kcResultCursor):
+                for key, quizValue in enumerate(studentValue.get("slides")):
+                    for key, attemptsValue in enumerate(quizValue.get("quizzes")):
+                        result.append(attemptsValue.get("attempts")[-1]["kc"])
+            #TODO loop through database and fetch result for each id and store in list
+        else:
+            student_id = []
+            kcResultCursor = db.students.find()
+            for key, idValue in enumerate(kcResultCursor):
+                student_id.append(idValue["_id"])
+                print ("ID")
+                print student_id
+                for key, quizValue in enumerate(idValue.get("slides")):
+                    for key, attemptsValue in enumerate(quizValue.get("quizzes")):
+                        result.append({"student_id" : attemptsValue.get("attempts")[-1]["kc"]})
+            print ("Test")
+            print result
+        return result
+                #TODO get kc for one student and send it to Chunk 2 and then to CreateSlide
     def calculateTotalWeight(self, quizWeight, patternWeight, suffix=''):
         """
         Calculate total weight for knowledge component on slide
@@ -785,7 +805,6 @@ class ComplexHTMLXBlock(XBlock):
             print("Quiz value")
             quiz_type = data["ch_question"]["quiz_id"].split("_")
             quiz_attempts.update({'student_id' : student_id, 'quizid' : quizId, 'attempts' : attempt, "type": quiz_type[0]})
-            self.toStudentsCollection(quiz_attempts)
             self.qz_attempted = data['ch_question'].copy()
         for item in xrange(len(body_json["quizzes"])):
 
@@ -795,6 +814,7 @@ class ComplexHTMLXBlock(XBlock):
                 else:
                     correct_and_reason.update({'correct': 'false'})
         result = {"quizId": quizId, "patternId": patternId, "actionId": actionId}
+        self.toStudentsCollection(quiz_attempts, correct_and_reason)
         self.fetchPatternAndQuiz(result)
         print("Queue")
         print("Before")
