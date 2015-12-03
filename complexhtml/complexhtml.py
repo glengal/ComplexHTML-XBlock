@@ -145,6 +145,12 @@ class ComplexHTMLXBlock(XBlock):
     totalWeight = Integer(
         default= 0, scope=Scope.user_state
     )
+    to_graph = List(
+        default = [], scope=Scope.user_state
+    )
+    vertical_name = String(
+        default = "", scope=Scope.user_state
+    )
     has_score = True
     icon_class = 'other'
 
@@ -328,7 +334,7 @@ class ComplexHTMLXBlock(XBlock):
         """
         Write to Students collection
         """
-        self.fetchKcFromStudentsCollection()
+        self.kcsToGraph()
         if data:
             print ("Student Collection")
             print correct_and_reason
@@ -421,34 +427,41 @@ class ComplexHTMLXBlock(XBlock):
                         patternWeight += int(pattern["weight"])
         self.calculateTotalWeight(quizWeight, patternWeight )
 
-    def fetchKcFromStudentsCollection(self): #studentGraph):
+    def fetchKcFromStudentsCollection(self, kcResultCursor):
+        if (kcResultCursor):
+            result = 0
+            for key, studentValue in enumerate(kcResultCursor):
+                for key, quizValue in enumerate(studentValue.get("slides")):
+                    for key, attemptsValue in enumerate(quizValue.get("quizzes")):
+                        result= attemptsValue.get("attempts")[-1]["kc"]
+        return result
+    #TODO take slideId and compare to modulestore and send to createSlide
+    #for student graph
+    # slide_id -> { kc }
+    # for teacher graph
+    # student_id -> {slide_id -> {kc}}
+    def kcsToGraph(self):#studentGraph):
         #Testing
-        studentGraph = False
+        print("Test of vertical")
+        print self.vertical_name
+        studentGraph = True
         result = []
+        studentData = {}
         #testing
         db = self.mongo_connection()
         if (studentGraph):
             student_id = self.get_student_id()
             kcResultCursor = db.students.find({"_id" : student_id})
-            for key, studentValue in enumerate(kcResultCursor):
-                for key, quizValue in enumerate(studentValue.get("slides")):
-                    for key, attemptsValue in enumerate(quizValue.get("quizzes")):
-                        result.append(attemptsValue.get("attempts")[-1]["kc"])
-            #TODO loop through database and fetch result for each id and store in list
+            studentData = {'student_id': student_id, 'kc' : self.fetchKcFromStudentsCollection(kcResultCursor)}
+            result.append(studentData)
         else:
-            student_id = []
-            kcResultCursor = db.students.find()
-            for key, idValue in enumerate(kcResultCursor):
-                student_id.append(idValue["_id"])
-                print ("ID")
-                print student_id
-                for key, quizValue in enumerate(idValue.get("slides")):
-                    for key, attemptsValue in enumerate(quizValue.get("quizzes")):
-                        result.append({"student_id" : attemptsValue.get("attempts")[-1]["kc"]})
-            print ("Test")
-            print result
+            allStudents = db.students.find()
+            modulestoreCollection = db.modulestore.find()
+            for key, idValue in enumerate(allStudents):
+                kcResultCursor = db.students.find({"_id": idValue.get('_id')})
+                studentData = {'student_id': idValue.get('_id'), 'kc' : self.fetchKcFromStudentsCollection(kcResultCursor)}
+                result.append(studentData)
         return result
-                #TODO get kc for one student and send it to Chunk 2 and then to CreateSlide
     def calculateTotalWeight(self, quizWeight, patternWeight, suffix=''):
         """
         Calculate total weight for knowledge component on slide
@@ -466,6 +479,13 @@ class ComplexHTMLXBlock(XBlock):
         Function that sends the condition of to proceed or not to next slide
         """
         return {"conditional_id" : self.conditional_id}
+
+    @XBlock.json_handler
+    def to_send_for_graph(self, data, suffix=''):
+        """
+        Function that sends kc and student_ids for graphs
+        """
+        return {"to_graph" : self.kcsToGraph()}
 
     @XBlock.json_handler
     def to_send_kc(self, data, suffix=''):
@@ -971,6 +991,7 @@ class ComplexHTMLXBlock(XBlock):
 
             # NOTE: No validation going on here; be careful with your code
             self.display_name = data["display_name"]
+            self.vertical_name = data["display_name"]
             self.record_click = data["record_click"] == 1
             self.record_hover = data["record_hover"] == 1
             self.tick_interval = int(data["tick_interval"])
