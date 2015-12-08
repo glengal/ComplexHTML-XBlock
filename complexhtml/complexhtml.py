@@ -436,16 +436,15 @@ class ComplexHTMLXBlock(XBlock):
                         result.append({"slide_name": slide,"kc" : kc })
         return result
 
-    def kcsToGraph(self):#studentGraph):
+    def kcsToGraph(self, studentGraph):
         #Testing
-        studentGraph = False
         result = []
         studentData = {}
 
         db = self.mongo_connection()
         # modulestoreCollection = db.modulestore.find()
         #testin
-        if (studentGraph):
+        if (studentGraph["studentGraph"]):
             student_id = self.get_student_id()
             kcResultCursor = db.students.find({"_id" : student_id})
             kcSlideResult = self.fetchKcFromStudentsCollection(kcResultCursor)
@@ -485,7 +484,7 @@ class ComplexHTMLXBlock(XBlock):
         """
         Function that sends kc and student_ids for graphs
         """
-        return {"to_graph" : self.kcsToGraph()}
+        return {"to_graph" : self.kcsToGraph(data)}
 
     @XBlock.json_handler
     def to_send_kc(self, data, suffix=''):

@@ -161,11 +161,11 @@ function kcTotalWeight(){
         data: JSON.stringify({})
         });
 }
-function kcsForGraph (){
+function kcsForGraph (studentGraph){
     $.ajax({
         type: "POST",
         url: runtime.handlerUrl(xblock_element, 'to_send_for_graph'),
-        data: JSON.stringify({}),
+        data: JSON.stringify({studentGraph}),
         success: function(result) {
            $(anySlide).trigger('drawGraph', result);
         }

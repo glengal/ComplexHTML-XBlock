@@ -3,6 +3,9 @@ $(function ($) {
 
     getCleanBody(function(){
         anySlide = new AVIATION.common.Slide();
+        $(anySlide).on("getGraphData", function(e,studentGraph){
+            kcsForGraph(studentGraph);
+        });
         anySlide.constructor(json_clean_setting);
         var patternId = 0;
         var actionId = false;
@@ -24,9 +27,9 @@ $(function ($) {
                 //sendEmail();
                 conditionals();
                 kcTotalWeight();
-                kcsForGraph();
             }
         });
+
     });
 
     if($(".action-publish") === undefined){
