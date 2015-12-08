@@ -145,12 +145,6 @@ class ComplexHTMLXBlock(XBlock):
     totalWeight = Integer(
         default= 0, scope=Scope.user_state
     )
-    to_graph = List(
-        default = [], scope=Scope.user_state
-    )
-    vertical_name = String(
-        default = "", scope=Scope.user_state
-    )
     has_score = True
     icon_class = 'other'
 
@@ -429,39 +423,45 @@ class ComplexHTMLXBlock(XBlock):
 
     def fetchKcFromStudentsCollection(self, kcResultCursor):
         if (kcResultCursor):
-            result = 0
+            db = self.mongo_connection()
+            result = []
+            kc = 0
+            slide = ""
             for key, studentValue in enumerate(kcResultCursor):
                 for key, quizValue in enumerate(studentValue.get("slides")):
-                    for key, attemptsValue in enumerate(quizValue.get("quizzes")):
-                        result= attemptsValue.get("attempts")[-1]["kc"]
+                    for key, slideValue in enumerate(db.modulestore.find({"_id.name" : quizValue.get("slide_id")})):
+                        slide = slideValue.get("metadata")["display_name"]
+                        for key, attemptsValue in enumerate(quizValue.get("quizzes")):
+                            kc = attemptsValue.get("attempts")[-1]["kc"]
+                        result.append({"slide_name": slide,"kc" : kc })
         return result
-    #TODO take slideId and compare to modulestore and send to createSlide
-    #for student graph
-    # slide_id -> { kc }
-    # for teacher graph
-    # student_id -> {slide_id -> {kc}}
+
     def kcsToGraph(self):#studentGraph):
         #Testing
-        print("Test of vertical")
-        print self.vertical_name
-        studentGraph = True
+        studentGraph = False
         result = []
         studentData = {}
-        #testing
+
         db = self.mongo_connection()
+        # modulestoreCollection = db.modulestore.find()
+        #testin
         if (studentGraph):
             student_id = self.get_student_id()
             kcResultCursor = db.students.find({"_id" : student_id})
-            studentData = {'student_id': student_id, 'kc' : self.fetchKcFromStudentsCollection(kcResultCursor)}
-            result.append(studentData)
+            kcSlideResult = self.fetchKcFromStudentsCollection(kcResultCursor)
+            print "Test result"
+            result.append(kcSlideResult)
+            print result
         else:
             allStudents = db.students.find()
-            modulestoreCollection = db.modulestore.find()
             for key, idValue in enumerate(allStudents):
                 kcResultCursor = db.students.find({"_id": idValue.get('_id')})
-                studentData = {'student_id': idValue.get('_id'), 'kc' : self.fetchKcFromStudentsCollection(kcResultCursor)}
-                result.append(studentData)
+                kcSlideResult = self.fetchKcFromStudentsCollection(kcResultCursor)
+                print "Test result"
+                result.append({"student_id": idValue.get("_id"), "slides" :kcSlideResult})
+                print result
         return result
+
     def calculateTotalWeight(self, quizWeight, patternWeight, suffix=''):
         """
         Calculate total weight for knowledge component on slide
