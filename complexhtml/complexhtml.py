@@ -328,7 +328,6 @@ class ComplexHTMLXBlock(XBlock):
         """
         Write to Students collection
         """
-        self.kcsToGraph()
         if data:
             print ("Student Collection")
             print correct_and_reason
