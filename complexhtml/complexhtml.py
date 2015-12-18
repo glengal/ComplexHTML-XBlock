@@ -324,27 +324,29 @@ class ComplexHTMLXBlock(XBlock):
             db.slides.insert({"_id" : slide_list["name"], "kc": {""}})
         module_structure = {"chapter" : chapter, "sequential" : sequential, "vertical" : vertical}
 
-    def toStudentsCollection(self, data, correct_and_reason):
+    def toStudentsCollection(self, data, correct_and_reason, slideid):
         """
         Write to Students collection
         """
-        self.kcsToGraph()
         if data:
             print ("Student Collection")
             print correct_and_reason
             db = self.mongo_connection()
-            slideid = self.get_vertical()
-            student = db.students.find_one({"_id" : data["student_id"], "slides.slide_id" : slideid, "slides.quizzes.quiz_id" : data["quizid"]})
-            if (student):
-                for slide in student.get("slides"):
-                    for quiz in slide["quizzes"]:
-                        for attempt in quiz["attempts"]:
-                            attempt = attempt["attempt"]
-                attempt += 1
-                print attempt
-                db.students.update({"_id": data["student_id"],"slides.slide_id": slideid, "slides.quizzes.quiz_id": data["quizid"]} , {"$push": {"slides.0.quizzes.$.attempts":{"attempt": attempt, "kc": self.totalWeight, "answer_result": correct_and_reason["correct"]}}})
+            student_exists = db.students.find_one({"_id": data["student_id"]})
+            if (student_exists):
+                student = db.students.find_one({"_id" : data["student_id"], "slides.slide_id" : slideid, "slides.quizzes.quiz_id" : data["quizid"]})
+                if (student):
+                    for slide in student["slides"]:
+                        for quiz in slide["quizzes"]:
+                            for attempt in quiz["attempts"]:
+                                attempt = attempt["attempt"]
+                    attempt += 1
+                    print attempt
+                    db.students.update({"_id": data["student_id"],"slides.slide_id": slideid, "slides.quizzes.quiz_id": data["quizid"]} , {"$push": {"slides.0.quizzes.$.attempts":{"attempt": attempt, "kc": self.totalWeight, "answer_result": correct_and_reason["correct"]}}})
+                else:
+                    db.students.update({"_id": data["student_id"]} , {"$push": {"slides":{"slide_id" : slideid, "quizzes" :[{"quiz_id" : data["quizid"], "attempts": [{ "attempt": 0, "kc": self.totalWeight, "answer_result":     correct_and_reason["correct"]}], "type" : data["type"]}]}}})
             else:
-                db.students.insert({"_id" : data["student_id"],"slides":[{"slide_id" : slideid, "quizzes" : [{"quiz_id" : data["quizid"], "attempts": [{ "attempt":data["attempts"], "kc": self.totalWeight, "answer_result": correct_and_reason["correct"]}], "type" : data["type"]}]}]})
+                db.students.insert({"_id" : data["student_id"],"slides":[{"slide_id" : slideid, "quizzes" :       [{"quiz_id" : data["quizid"], "attempts": [{ "attempt":data["attempts"], "kc": self.totalWeight, "answer_result":     correct_and_reason["correct"]}], "type" : data["type"]}]}]})
 
     def toQuizzesCollection(self, data):
         """
@@ -511,9 +513,11 @@ class ComplexHTMLXBlock(XBlock):
 
     def get_vertical(self):
         """
-       Get current vertical from parent runtime
-       """
-        vertical = str(self.parent).split("/")[::-1][0]
+        Get current vertical from parent runtime
+        """
+        #parent = self.get_parent()
+        vertical = self
+        #str(self.parent).split("/")[::-1][0]
         return vertical
 
     def get_snaps(self,dict_course, sequential):
@@ -807,6 +811,7 @@ class ComplexHTMLXBlock(XBlock):
         body_json = json.loads(self.body_json)
         quizId = 0
         patternId = 0
+        slide_id = 0
         actionId = False
         student_id = self.get_student_id()
         print("Student_id")
@@ -821,6 +826,8 @@ class ComplexHTMLXBlock(XBlock):
                     patternId = value
                 if key == "actionId":
                     actionId = value
+                if key == "slide_id":
+                    slide_id = value
             print("Quiz value")
             quiz_type = data["ch_question"]["quiz_id"].split("_")
             quiz_attempts.update({'student_id' : student_id, 'quizid' : quizId, 'attempts' : attempt, "type": quiz_type[0]})
@@ -833,7 +840,7 @@ class ComplexHTMLXBlock(XBlock):
                 else:
                     correct_and_reason.update({'correct': 'false'})
         result = {"quizId": quizId, "patternId": patternId, "actionId": actionId}
-        self.toStudentsCollection(quiz_attempts, correct_and_reason)
+        self.toStudentsCollection(quiz_attempts, correct_and_reason, slide_id)
         self.fetchPatternAndQuiz(result)
         print("Queue")
         print("Before")
