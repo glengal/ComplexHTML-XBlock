@@ -340,7 +340,7 @@ class ComplexHTMLXBlock(XBlock):
             if (student_exists):
                 student = db.students.find_one({"_id" : data["student_id"], "slides.slide_id" : slideid})
                 if (student):
-                    for slide in student.get("slides"):
+                    for slide in student["slides"]:
                         for quiz in slide["quizzes"]:
                             print ("Testing quizzes")
                             print type(quiz["quiz_id"])
