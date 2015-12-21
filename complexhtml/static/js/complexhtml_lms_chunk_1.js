@@ -1,15 +1,15 @@
 /* JavaScript for ComplexHTML XBlock. */
 function ComplexHTMLXBlock(runtime, xblock_element) {
 
-attempted_on = $('.sstatus > .attempts');
-quiz_results = $('.status > .quiz_result');
 
 var json_settings = {};
 var json_clean_setting = {};
 var session_tick = parseInt("{{ self.tick_interval }}");
 var tick_timer = "";
 
-console.log($("a[aria-selected=true]").attr("data-id").split("/").pop());
+// if (typeof $("a[aria-selected=true]") !== 'undefined'){
+//     console.log($("a[aria-selected=true]").attr("data-id").split("/").pop());
+// }
 // Load JSON settings from database
 function loadSettings() {
     $.ajax({
@@ -182,7 +182,7 @@ function checkQuizResult(selectedId, selected, patternId, actionId){
     }
     var quiz_id = $('.cdot_quiz').attr('id');
     var selectedId1 = selectedId.split('_');
-    var slide_id = $("a[aria-selected=true]").attr("data-id").split("/").pop();
+    // var slide_id = $("a[aria-selected=true]").attr("data-id").split("/").pop();
     var selectedQuizId = parseInt(selectedId1[1]);
         for (var i = 0; i < answer[selectedQuizId].length; i++){
          if (answer[selectedQuizId][i].correct){
@@ -190,13 +190,13 @@ function checkQuizResult(selectedId, selected, patternId, actionId){
             break;
              }
         }
-var ch_question = {quiz_id, selectedQuizId, selected, correct, patternId, actionId, slide_id};
+var ch_question = {quiz_id, selectedQuizId, selected, correct, patternId, actionId};
+    //  slide_id};
     $.ajax({
         type: "POST",
         url: runtime.handlerUrl(xblock_element, 'get_quiz_attempts'),
         data: JSON.stringify({'ch_question': ch_question}),
         success: function(result) {
-           quiz_results.text(result.quiz_result_id);
            $(anySlide).trigger('checkCompleted', result);
         }
     });

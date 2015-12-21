@@ -145,6 +145,9 @@ class ComplexHTMLXBlock(XBlock):
     totalWeight = Integer(
         default= 0, scope=Scope.user_state
     )
+    check = Integer(
+        default = 0, scope=Scope.user_state
+    )
     has_score = True
     icon_class = 'other'
 
@@ -332,21 +335,28 @@ class ComplexHTMLXBlock(XBlock):
             print ("Student Collection")
             print correct_and_reason
             db = self.mongo_connection()
+            slideid = self.get_vertical()
             student_exists = db.students.find_one({"_id": data["student_id"]})
             if (student_exists):
-                student = db.students.find_one({"_id" : data["student_id"], "slides.slide_id" : slideid, "slides.quizzes.quiz_id" : data["quizid"]})
+                student = db.students.find_one({"_id" : data["student_id"], "slides.slide_id" : slideid})
                 if (student):
                     for slide in student.get("slides"):
                         for quiz in slide["quizzes"]:
-                            for attempt in quiz["attempts"]:
-                                attempt = attempt["attempt"]
-                    attempt += 1
-                    print attempt
-                    db.students.update({"_id": data["student_id"],"slides.slide_id": slideid, "slides.quizzes.quiz_id": data["quizid"]} , {"$push": {"slides.0.quizzes.$.attempts":{"attempt": attempt, "kc": self.totalWeight, "answer_result": correct_and_reason["correct"]}}})
+                            print ("Testing quizzes")
+                            print type(quiz["quiz_id"])
+                            print type(data['quizid'])
+                            if quiz["quiz_id"] == data['quizid']:
+                                attempt = len(quiz["attempts"])
+                                attempt += 1
+                                print attempt
+                                db.students.update({"_id": data["student_id"],"slides.slide_id": slideid, "slides.quizzes.quiz_id": data["quizid"]} , {"$push": {"slides.$.quizzes." + str(data['quizid']) + ".attempts":{"attempt": attempt, "kc": self.totalWeight, "answer_result": correct_and_reason["correct"]}}})
+                            elif self.check == 0:
+                                db.students.update({"_id": data["student_id"], "slides.slide_id" : slideid} , {"$push": {"slides.$.quizzes": {"quiz_id" : data["quizid"], "attempts": [{ "attempt": 1, "kc": self.totalWeight, "answer_result":correct_and_reason["correct"]}], "type" : data["type"]}}})
+                                self.check += 1
                 else:
-                    db.students.update({"_id": data["student_id"]} , {"$push": {"slides":{"slide_id" : slideid, "quizzes" :[{"quiz_id" : data["quizid"], "attempts": [{ "attempt": 0, "kc": self.totalWeight, "answer_result":     correct_and_reason["correct"]}], "type" : data["type"]}]}}})
+                    db.students.update({"_id": data["student_id"]} , {"$push": {"slides":{"slide_id" : slideid, "quizzes" :[{"quiz_id" : data["quizid"], "attempts": [{ "attempt": 1, "kc": self.totalWeight, "answer_result":     correct_and_reason["correct"]}], "type" : data["type"]}]}}})
             else:
-                db.students.insert({"_id" : data["student_id"],"slides":[{"slide_id" : slideid, "quizzes" :       [{"quiz_id" : data["quizid"], "attempts": [{ "attempt":data["attempts"], "kc": self.totalWeight, "answer_result":     correct_and_reason["correct"]}], "type" : data["type"]}]}]})
+                db.students.insert({"_id" : data["student_id"],"slides":[{"slide_id" : slideid, "quizzes" :[{"quiz_id" : data["quizid"], "attempts": [{ "attempt":data["attempts"], "kc": self.totalWeight, "answer_result":     correct_and_reason["correct"]}], "type" : data["type"]}]}]})
 
     def toQuizzesCollection(self, data):
         """
@@ -419,7 +429,7 @@ class ComplexHTMLXBlock(XBlock):
                         quizWeight += int(quiz["weight"])
                 patternList = value["pattern"]
                 for pattern in patternList:
-                    if int(pattern["id"]) == data["patternId"] :
+                    if pattern["id"] == data["patternId"] :
                         patternWeight += int(pattern["weight"])
         self.calculateTotalWeight(quizWeight, patternWeight )
 
@@ -515,9 +525,8 @@ class ComplexHTMLXBlock(XBlock):
         """
         Get current vertical from parent runtime
         """
-        #parent = self.get_parent()
-        vertical = self
-        #str(self.parent).split("/")[::-1][0]
+        parent = self.get_parent()
+        vertical = str(self.parent).split("/")[::-1][0]
         return vertical
 
     def get_snaps(self,dict_course, sequential):
