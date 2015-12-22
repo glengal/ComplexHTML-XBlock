@@ -145,9 +145,6 @@ class ComplexHTMLXBlock(XBlock):
     totalWeight = Integer(
         default= 0, scope=Scope.user_state
     )
-    check = Integer(
-        default = 0, scope=Scope.user_state
-    )
     has_score = True
     icon_class = 'other'
 
@@ -332,6 +329,8 @@ class ComplexHTMLXBlock(XBlock):
         Write to Students collection
         """
         if data:
+            check = 0
+            quiz_dict = []
             print ("Student Collection")
             print correct_and_reason
             db = self.mongo_connection()
@@ -342,17 +341,21 @@ class ComplexHTMLXBlock(XBlock):
                 if (student):
                     for slide in student.get("slides"):
                         for quiz in slide["quizzes"]:
+                            quiz_dict.append(quiz["quiz_id"])
                             print ("Testing quizzes")
-                            print type(quiz["quiz_id"])
-                            print type(data['quizid'])
+                            print quiz["quiz_id"]
+                            print data['quizid']
+                            print ("Quiz dict")
+                            print quiz_dict
+                            print check
                             if quiz["quiz_id"] == data['quizid']:
                                 attempt = len(quiz["attempts"])
                                 attempt += 1
                                 print attempt
                                 db.students.update({"_id": data["student_id"],"slides.slide_id": slideid, "slides.quizzes.quiz_id": data["quizid"]} , {"$push": {"slides.$.quizzes." + str(data['quizid']) + ".attempts":{"attempt": attempt, "kc": self.totalWeight, "answer_result": correct_and_reason["correct"]}}})
-                            elif self.check == 0:
+                            elif check == 0 and data['quizid'] not in quiz_dict:
                                 db.students.update({"_id": data["student_id"], "slides.slide_id" : slideid} , {"$push": {"slides.$.quizzes": {"quiz_id" : data["quizid"], "attempts": [{ "attempt": 1, "kc": self.totalWeight, "answer_result":correct_and_reason["correct"]}], "type" : data["type"]}}})
-                                self.check += 1
+                                check += 1
                 else:
                     db.students.update({"_id": data["student_id"]} , {"$push": {"slides":{"slide_id" : slideid, "quizzes" :[{"quiz_id" : data["quizid"], "attempts": [{ "attempt": 1, "kc": self.totalWeight, "answer_result":     correct_and_reason["correct"]}], "type" : data["type"]}]}}})
             else:
