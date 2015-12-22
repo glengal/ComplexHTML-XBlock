@@ -330,6 +330,7 @@ class ComplexHTMLXBlock(XBlock):
         """
         if data:
             check = 0
+            attempt = 0
             quiz_dict = []
             print ("Student Collection")
             print correct_and_reason
@@ -360,6 +361,7 @@ class ComplexHTMLXBlock(XBlock):
                     db.students.update({"_id": data["student_id"]} , {"$push": {"slides":{"slide_id" : slideid, "quizzes" :[{"quiz_id" : data["quizid"], "attempts": [{ "attempt": 1, "kc": self.totalWeight, "answer_result":     correct_and_reason["correct"]}], "type" : data["type"]}]}}})
             else:
                 db.students.insert({"_id" : data["student_id"],"slides":[{"slide_id" : slideid, "quizzes" :[{"quiz_id" : data["quizid"], "attempts": [{ "attempt":data["attempts"], "kc": self.totalWeight, "answer_result":     correct_and_reason["correct"]}], "type" : data["type"]}]}]})
+        return attempt
 
     def toQuizzesCollection(self, data):
         """
@@ -818,6 +820,7 @@ class ComplexHTMLXBlock(XBlock):
     def get_quiz_attempts(self, data, suffix =''):
 
         correct_and_reason = {}
+        attempt_for_conditionals = 0
         quiz_attempts = {}
         attempt = 1
         body_json = json.loads(self.body_json)
@@ -852,14 +855,10 @@ class ComplexHTMLXBlock(XBlock):
                 else:
                     correct_and_reason.update({'correct': 'false'})
         result = {"quizId": quizId, "patternId": patternId, "actionId": actionId}
-        self.toStudentsCollection(quiz_attempts, correct_and_reason, slide_id)
+        attempt_for_conditionals = self.toStudentsCollection(quiz_attempts, correct_and_reason, slide_id)
         self.fetchPatternAndQuiz(result)
-        print("Queue")
-        print("Before")
-        print quiz_attempts
         print("End of attempts")
-        return {"quiz_result_id": correct_and_reason}
-
+        return {"quiz_result_id": correct_and_reason, "attempts": attempt_for_conditionals}
 
     def student_view(self, context=None):
         """
